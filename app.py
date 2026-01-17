@@ -801,19 +801,20 @@ for idx, r in enumerate(ml_results):
     else:
         date_str = datetime.now(eastern).strftime("%y%b%d").upper()
     ticker = f"KXNFLGAME-{date_str}{away_code}{home_code}"
-    kalshi_url = f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
+    this_url = f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
     
     reasons_str = " • ".join(r["reasons"])
     pick_code = KALSHI_CODES.get(pick_team, pick_team[:3].upper())
     opponent = game_away if pick_team == game_home else game_home
     
-    # Use columns with Streamlit's native link_button
+    # Use expander to show debug info
     col1, col2 = st.columns([5, 1])
     with col1:
         st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:8px 12px;border-radius:6px;border-left:3px solid {r['color']}">
-        <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons_str}</span></div>""", unsafe_allow_html=True)
+        <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons_str}</span>
+        <br><span style="color:#444;font-size:0.7em">{game_away}@{game_home} → {ticker}</span></div>""", unsafe_allow_html=True)
     with col2:
-        st.link_button(f"BUY {pick_code}", kalshi_url, use_container_width=True)
+        st.link_button(f"BUY {pick_code}", this_url, use_container_width=True, key=f"buy_{ticker}")
 
 strong_picks = [r for r in ml_results if r["score"] >= 6.5]
 if strong_picks:
