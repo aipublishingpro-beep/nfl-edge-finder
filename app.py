@@ -814,7 +814,7 @@ for idx, r in enumerate(ml_results):
         <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons_str}</span>
         <br><span style="color:#444;font-size:0.7em">{game_away}@{game_home} → {ticker}</span></div>""", unsafe_allow_html=True)
     with col2:
-        st.link_button(f"BUY {pick_code}", this_url, use_container_width=True, key=f"buy_{ticker}")
+        st.link_button(f"BUY {pick_code}", this_url, use_container_width=True, key=f"buy_ml_{idx}")
 
 strong_picks = [r for r in ml_results if r["score"] >= 6.5]
 if strong_picks:
