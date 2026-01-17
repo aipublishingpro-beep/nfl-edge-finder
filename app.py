@@ -5,8 +5,32 @@ import pytz
 import json
 import os
 import time
+import uuid
 
 st.set_page_config(page_title="NFL Edge Finder", page_icon="🏈", layout="wide")
+
+# ========== SESSION ID FOR DIAGNOSTICS ==========
+if "sid" not in st.session_state:
+    st.session_state["sid"] = str(uuid.uuid4())
+
+DIAGNOSTICS_FILE = "diagnostics_log.json"
+
+def log_diagnostic(action):
+    record = {
+        "timestamp": datetime.now().isoformat(),
+        "sid": st.session_state["sid"],
+        "action": action
+    }
+    try:
+        logs = []
+        if os.path.exists(DIAGNOSTICS_FILE):
+            with open(DIAGNOSTICS_FILE, 'r') as f:
+                logs = json.load(f)
+        logs.append(record)
+        with open(DIAGNOSTICS_FILE, 'w') as f:
+            json.dump(logs, f, indent=2)
+    except:
+        pass
 
 # ========== DAILY DATE KEY ==========
 eastern = pytz.timezone("US/Eastern")
@@ -123,7 +147,6 @@ TEAM_ABBREVS = {
     "Tennessee Titans": "Tennessee", "Washington Commanders": "Washington"
 }
 
-# Team stats (DVOA-style ratings, defense rank, home win%)
 TEAM_STATS = {
     "Arizona": {"dvoa": -8.5, "def_rank": 28, "home_win_pct": 0.45, "division": "NFC West", "timezone": "MST"},
     "Atlanta": {"dvoa": 2.5, "def_rank": 20, "home_win_pct": 0.55, "division": "NFC South", "timezone": "EST"},
@@ -159,7 +182,6 @@ TEAM_STATS = {
     "Washington": {"dvoa": 9.5, "def_rank": 8, "home_win_pct": 0.62, "division": "NFC East", "timezone": "EST"}
 }
 
-# Star QBs and key players
 STAR_PLAYERS = {
     "Arizona": ["Kyler Murray", "Marvin Harrison Jr."],
     "Atlanta": ["Kirk Cousins", "Bijan Robinson", "Drake London"],
@@ -195,7 +217,6 @@ STAR_PLAYERS = {
     "Washington": ["Jayden Daniels", "Terry McLaurin", "Brian Robinson Jr."]
 }
 
-# QB tier ratings (1-3, 3 = elite)
 QB_TIERS = {
     "Patrick Mahomes": 3, "Josh Allen": 3, "Lamar Jackson": 3, "Joe Burrow": 3,
     "Jalen Hurts": 3, "C.J. Stroud": 3, "Brock Purdy": 2, "Jayden Daniels": 2,
@@ -221,7 +242,6 @@ TEAM_LOCATIONS = {
     "Tennessee": (36.166, -86.771), "Washington": (38.908, -76.865)
 }
 
-# Division matchups for rivalry bonus
 DIVISIONS = {
     "AFC East": ["Buffalo", "Miami", "New England", "NY Jets"],
     "AFC North": ["Baltimore", "Cincinnati", "Cleveland", "Pittsburgh"],
@@ -270,7 +290,6 @@ def fetch_espn_scores():
             clock = status_obj.get("displayClock", "")
             period = status_obj.get("period", 0)
             
-            # Get game date
             game_date_str = event.get("date", "")
             try:
                 game_date = datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
@@ -400,7 +419,6 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
     score_home, score_away = 0, 0
     reasons_home, reasons_away = [], []
     
-    # 1. SHORT REST (+1.5)
     if away_team in short_rest_teams and home_team not in short_rest_teams:
         score_home += 1.5
         reasons_home.append("🛏️ Opp Short Rest")
@@ -408,7 +426,6 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         score_away += 1.5
         reasons_away.append("🛏️ Opp Short Rest")
     
-    # 2. DVOA/NET RATING (+1.0)
     home_dvoa = home.get('dvoa', 0)
     away_dvoa = away.get('dvoa', 0)
     dvoa_diff = home_dvoa - away_dvoa
@@ -419,7 +436,6 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         score_away += 1.0
         reasons_away.append(f"📊 DVOA +{away_dvoa:.1f}")
     
-    # 3. TOP 5 DEFENSE (+1.0)
     home_def = home.get('def_rank', 16)
     away_def = away.get('def_rank', 16)
     if home_def <= 5:
@@ -429,10 +445,8 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         score_away += 1.0
         reasons_away.append(f"🛡️ #{away_def} DEF")
     
-    # 4. HOME FIELD (+1.0)
     score_home += 1.0
     
-    # 5. QB/STAR INJURIES (+2.5)
     home_inj, home_out, home_qb_out = get_injury_score(home_team, injuries)
     away_inj, away_out, away_qb_out = get_injury_score(away_team, injuries)
     
@@ -452,7 +466,6 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         if home_out:
             reasons_away.append(f"🏥 {home_out[0][:12]}")
     
-    # 6. TRAVEL/TIMEZONE (+1.0)
     travel_miles = calc_distance(away_loc, home_loc)
     away_tz = away.get('timezone', 'EST')
     home_tz = home.get('timezone', 'EST')
@@ -465,18 +478,15 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         else:
             reasons_home.append(f"✈️ {int(travel_miles)}mi")
     
-    # 7. HOME RECORD (+0.8)
     home_hw = home.get('home_win_pct', 0.5)
     if home_hw > 0.65:
         score_home += 0.8
         reasons_home.append(f"🏠 {int(home_hw*100)}%")
     
-    # 8. ALTITUDE - DENVER (+1.0)
     if home_team == "Denver":
         score_home += 1.0
         reasons_home.append("🏔️ Mile High")
     
-    # 9. WIN STREAK (+1.0)
     home_record = fetch_team_record(home_team)
     away_record = fetch_team_record(away_team)
     home_streak = home_record.get('streak', 0)
@@ -495,12 +505,10 @@ def calc_ml_score(home_team, away_team, injuries, short_rest_teams=None):
         score_away += 0.5
         reasons_away.append(f"🔥 W{away_streak}")
     
-    # 10. DIVISION RIVAL (+0.5)
     if is_division_rival(home_team, away_team):
         score_home += 0.5
         reasons_home.append("🆚 Division")
     
-    # Calculate final scores
     total = score_home + score_away
     if total > 0:
         home_final = round((score_home / total) * 10, 1)
@@ -562,7 +570,7 @@ with st.sidebar:
 | **Sun 1 PM** | Kickoff |
 """)
     st.divider()
-    st.caption("v1.1 NFL EDGE")
+    st.caption("v1.2 NFL EDGE")
 
 # ========== FETCH DATA ==========
 games = fetch_espn_scores()
@@ -577,7 +585,7 @@ st.title("🏈 NFL EDGE FINDER")
 st.subheader("📈 ACTIVE POSITIONS")
 
 hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.1 NFL")
+hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.2 NFL")
 if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True):
     st.session_state.auto_refresh = not st.session_state.auto_refresh
     st.rerun()
@@ -768,22 +776,44 @@ for game_key, g in games.items():
         game_date = g.get('game_date')
         ml_results.append({
             "pick": pick, "score": score, "color": color, "reasons": reasons,
-            "away": away, "home": home, "game_date": game_date
+            "away": away, "home": home, "game_date": game_date, "game_key": game_key
         })
     except Exception as e:
         continue
 
 ml_results.sort(key=lambda x: x["score"], reverse=True)
 
-for r in ml_results:
+for idx, r in enumerate(ml_results):
     if r["score"] < 5.5:
         continue
-    kalshi_url = build_kalshi_ml_url(r["away"], r["home"], r.get("game_date"))
-    reasons = " • ".join(r["reasons"])
-    pick_code = KALSHI_CODES.get(r['pick'], r['pick'][:3].upper())
-    st.markdown(f"""<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0f172a,#020617);padding:6px 12px;margin-bottom:4px;border-radius:6px;border-left:3px solid {r['color']}">
-    <div><b style="color:#fff">{r['pick']}</b> <span style="color:#666">vs {r['away'] if r['pick']==r['home'] else r['home']}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons}</span></div>
-    <a href="{kalshi_url}" target="_blank" style="background:#16a34a;color:#fff;padding:4px 10px;border-radius:5px;font-size:0.8em;text-decoration:none;font-weight:600">BUY {pick_code}</a></div>""", unsafe_allow_html=True)
+    
+    # Build URL completely fresh for THIS game
+    game_away = r["away"]
+    game_home = r["home"]
+    game_dt = r.get("game_date")
+    pick_team = r["pick"]
+    
+    # Build Kalshi URL inline
+    away_code = KALSHI_CODES.get(game_away, "XXX")
+    home_code = KALSHI_CODES.get(game_home, "XXX")
+    if game_dt:
+        date_str = game_dt.strftime("%y%b%d").upper()
+    else:
+        date_str = datetime.now(eastern).strftime("%y%b%d").upper()
+    ticker = f"KXNFLGAME-{date_str}{away_code}{home_code}"
+    kalshi_url = f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
+    
+    reasons_str = " • ".join(r["reasons"])
+    pick_code = KALSHI_CODES.get(pick_team, pick_team[:3].upper())
+    opponent = game_away if pick_team == game_home else game_home
+    
+    # Use columns with Streamlit's native link_button
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:8px 12px;border-radius:6px;border-left:3px solid {r['color']}">
+        <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons_str}</span></div>""", unsafe_allow_html=True)
+    with col2:
+        st.link_button(f"BUY {pick_code}", kalshi_url, use_container_width=True)
 
 strong_picks = [r for r in ml_results if r["score"] >= 6.5]
 if strong_picks:
@@ -869,4 +899,7 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Entertainment only. Not financial advice. v1.1 NFL EDGE")
+if st.button("Show details"):
+    log_diagnostic("show_details")
+    st.caption(f"Session: {st.session_state['sid'][:8]}...")
+st.caption("⚠️ Entertainment only. Not financial advice. v1.2 NFL EDGE")
