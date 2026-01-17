@@ -807,14 +807,16 @@ for idx, r in enumerate(ml_results):
     pick_code = KALSHI_CODES.get(pick_team, pick_team[:3].upper())
     opponent = game_away if pick_team == game_home else game_home
     
-    # Use expander to show debug info
-    col1, col2 = st.columns([5, 1])
-    with col1:
-        st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:8px 12px;border-radius:6px;border-left:3px solid {r['color']}">
-        <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> <span style="color:#38bdf8">{r['score']}/10</span> <span style="color:#777;font-size:0.8em">{reasons_str}</span>
-        <br><span style="color:#444;font-size:0.7em">{game_away}@{game_home} → {ticker}</span></div>""", unsafe_allow_html=True)
-    with col2:
-        st.link_button(f"BUY {pick_code}", this_url, use_container_width=True, key=f"buy_ml_{idx}")
+    # All in one markdown block with unique URL baked in
+    st.markdown(f"""<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0f172a,#020617);padding:8px 12px;margin-bottom:6px;border-radius:6px;border-left:3px solid {r['color']}">
+    <div>
+        <b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span> 
+        <span style="color:#38bdf8">{r['score']}/10</span> 
+        <span style="color:#777;font-size:0.8em">{reasons_str}</span>
+        <br><span style="color:#555;font-size:0.7em">{ticker}</span>
+    </div>
+    <a href="{this_url}" target="_blank" style="background:#16a34a;color:#fff;padding:6px 12px;border-radius:5px;font-size:0.85em;text-decoration:none;font-weight:600;white-space:nowrap">BUY {pick_code}</a>
+    </div>""", unsafe_allow_html=True)
 
 strong_picks = [r for r in ml_results if r["score"] >= 6.5]
 if strong_picks:
