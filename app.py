@@ -814,7 +814,8 @@ for idx, r in enumerate(ml_results):
     <span style="color:#777;font-size:0.8em">{reasons_str}</span></div>""", unsafe_allow_html=True)
     
     # Separate link button with explicit URL
-    st.link_button(f"🎯 BUY {pick_code} → {ticker}", this_url, use_container_width=True, key=f"mlpick{idx}")
+    st.link_button(f"BUY {pick_code}", this_url, use_container_width=True, key=f"mlpick{idx}")
+    st.caption(f"→ {ticker}")
     st.write("")
 
 strong_picks = [r for r in ml_results if r["score"] >= 6.5]
