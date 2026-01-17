@@ -539,6 +539,18 @@ with st.sidebar:
     st.caption("Track here → Execute on web")
     st.divider()
     
+    st.header("⏰ BEST BUY WINDOW")
+    st.markdown("""
+| When | Action |
+|------|--------|
+| **Fri 1 AM** | 🟢 Lines posted - BEST |
+| **Fri-Sat** | 🟢 Stale lines, low vol |
+| **Sun 9 AM** | 🟡 Volume spikes |
+| **Sun 1 PM** | 🔴 Kickoff - edge gone |
+""")
+    st.caption("📅 Picks available: Tuesday")
+    st.divider()
+    
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG BUY** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4\n\n⚪ **TOSS-UP** → 4.5-5.4")
     st.divider()
@@ -559,18 +571,7 @@ with st.sidebar:
 | 10 | 🆚 **Division** | +0.5 |
 """)
     st.divider()
-    
-    st.header("⏰ TIMING EDGE")
-    st.markdown("""
-| Day | Action |
-|-----|--------|
-| **Fri 1 AM** | Lines posted, stale |
-| **Sat** | Injury news |
-| **Sun 9 AM** | Volume, prices move |
-| **Sun 1 PM** | Kickoff |
-""")
-    st.divider()
-    st.caption("v1.2 NFL EDGE")
+    st.caption("v1.3 NFL EDGE")
 
 # ========== FETCH DATA ==========
 games = fetch_espn_scores()
