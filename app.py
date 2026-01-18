@@ -94,7 +94,6 @@ TEAM_ABBREVS = {
     "Tennessee Titans": "Tennessee", "Washington Commanders": "Washington"
 }
 
-# Reverse lookup: short name to Kalshi code
 SHORT_TO_KALSHI = {v: k for k, v in KALSHI_CODES.items()}
 
 TEAM_STATS = {
@@ -163,18 +162,10 @@ def build_kalshi_ml_url(away_team, home_team, game_date=None):
 
 # ========== FOOTBALL FIELD VISUALIZATION ==========
 def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team, yards_to_endzone=None, poss_text=None):
-    """
-    Render football field with ball position.
-    ball_yard: 0-100 scale where 0=away endzone, 100=home endzone
-    Returns None if data is invalid (scoring play, kickoff, etc.)
-    """
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
     
-    # Check if we have valid situation data
-    # After TDs, kickoffs, etc. - possession clears and data is stale
     if not possession_team or not poss_text:
-        # Return a "between plays" state instead of wrong data
         return f"""
         <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0;text-align:center">
             <span style="color:#ffaa00;font-size:1.1em">🏈 Between Plays / Scoring</span>
@@ -190,8 +181,6 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
         situation = "—"
     
     poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
-    
-    # Show ball location text
     ball_loc = poss_text if poss_text else ""
     
     field_html = f"""
@@ -264,7 +253,6 @@ def fetch_espn_scores():
             clock = status_obj.get("displayClock", "")
             period = status_obj.get("period", 0)
             
-            # Get situation data
             situation = comp.get("situation", {})
             down = situation.get("down")
             distance = situation.get("distance")
@@ -275,7 +263,6 @@ def fetch_espn_scores():
             poss_text = situation.get("possessionText", "")
             down_distance_text = situation.get("downDistanceText", "")
             
-            # Determine possession team
             if possession_id == home_id:
                 possession_team = home_team
                 is_home_possession = True
@@ -286,17 +273,10 @@ def fetch_espn_scores():
                 possession_team = None
                 is_home_possession = None
             
-            # FIXED BALL POSITION CALCULATION
-            # Field: 0 = away endzone (left), 100 = home endzone (right)
-            # yardsToEndzone = distance from scoring
-            # Away team attacks toward 100 (home endzone)
-            # Home team attacks toward 0 (away endzone)
             if yards_to_endzone is not None and is_home_possession is not None:
                 if is_home_possession:
-                    # Home team attacks left (toward 0), so ball is at yardsToEndzone from 0
                     ball_yard = yards_to_endzone
                 else:
-                    # Away team attacks right (toward 100), so ball is at 100 - yardsToEndzone
                     ball_yard = 100 - yards_to_endzone
             else:
                 ball_yard = 50
@@ -329,40 +309,32 @@ def fetch_espn_scores():
         return {}
 
 def fetch_play_by_play(event_id):
-    """Fetch recent plays for a specific game"""
     url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event_id}"
     try:
         resp = requests.get(url, timeout=10)
         data = resp.json()
         plays = []
-        
-        # Try multiple paths where ESPN stores plays
         all_plays = []
         
-        # Path 1: Direct plays array
         if "plays" in data:
             all_plays = data.get("plays", [])
         
-        # Path 2: Drives > previous > plays
         if not all_plays and "drives" in data:
             drives = data.get("drives", {})
             previous_drives = drives.get("previous", [])
             for drive in previous_drives:
                 drive_plays = drive.get("plays", [])
                 all_plays.extend(drive_plays)
-            # Also check current drive
             current = drives.get("current", {})
             if current:
                 all_plays.extend(current.get("plays", []))
         
-        # Path 3: scoringPlays
         if not all_plays and "scoringPlays" in data:
             all_plays = data.get("scoringPlays", [])
         
         if not all_plays:
             return []
         
-        # Get last 5 plays, most recent first
         recent_plays = all_plays[-5:] if len(all_plays) >= 5 else all_plays
         recent_plays = list(reversed(recent_plays))
         
@@ -371,21 +343,18 @@ def fetch_play_by_play(event_id):
             play_type = play.get("type", {}).get("text", "") if isinstance(play.get("type"), dict) else str(play.get("type", ""))
             is_scoring = play.get("scoringPlay", False)
             
-            # Handle period - can be dict or int
             period_data = play.get("period", {})
             if isinstance(period_data, dict):
                 period = period_data.get("number", 0)
             else:
                 period = period_data or 0
             
-            # Handle clock - can be dict or string
             clock_data = play.get("clock", {})
             if isinstance(clock_data, dict):
                 clock = clock_data.get("displayValue", "")
             else:
                 clock = str(clock_data) if clock_data else ""
             
-            # Detect play type for icons
             short_text = play.get("shortText", "") or ""
             text_lower = play_text.lower()
             
@@ -578,7 +547,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.7.4 NFL EDGE")
+    st.caption("v1.7.5 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -593,7 +562,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.4")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.5")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -601,7 +570,6 @@ if live_games or final_games:
         st.query_params["r"] = str(int(time.time()))
         st.rerun()
     
-    # FINAL GAMES
     for game_key, g in final_games.items():
         parts = game_key.split("@")
         winner = parts[1] if g['home_score'] > g['away_score'] else parts[0]
@@ -619,7 +587,6 @@ if live_games or final_games:
         </div>
         """, unsafe_allow_html=True)
     
-    # LIVE GAMES
     for game_key, g in live_games.items():
         quarter = g['period']
         clock_str = g['clock']
@@ -678,7 +645,6 @@ if live_games or final_games:
         </div>
         """, unsafe_allow_html=True)
         
-        # Football field visualization
         parts = game_key.split("@")
         field_html = render_football_field(
             g.get('ball_yard', 50),
@@ -692,7 +658,6 @@ if live_games or final_games:
         )
         st.markdown(field_html, unsafe_allow_html=True)
         
-        # Play-by-play
         with st.expander("📋 Recent Plays", expanded=False):
             plays = fetch_play_by_play(g.get('event_id'))
             if plays:
@@ -716,7 +681,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.4")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.5")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -811,8 +776,91 @@ else:
 
 st.divider()
 
+# ========== INJURY REPORT ==========
+st.subheader("🏥 INJURY REPORT")
+
+def get_key_injuries(injuries):
+    """Get the most impactful injuries across all teams"""
+    key_injuries = []
+    
+    for team, team_injuries in injuries.items():
+        stars = STAR_PLAYERS.get(team, [])
+        
+        for inj in team_injuries:
+            name = inj.get("name", "")
+            status = inj.get("status", "").upper()
+            position = inj.get("position", "").upper()
+            
+            if "OUT" not in status and "DOUBTFUL" not in status:
+                continue
+            
+            is_star = any(star.lower() in name.lower() for star in stars)
+            is_qb = position == "QB"
+            
+            # Determine star rating and include criteria
+            if is_qb:
+                star_rating = 3
+                icon = "🏈"
+            elif is_star:
+                star_rating = 2
+                icon = "🔥"
+            elif position in ["RB", "WR", "TE"]:
+                star_rating = 1
+                icon = "🏈"
+            else:
+                continue  # Skip non-key positions
+            
+            key_injuries.append({
+                "name": name,
+                "team": team,
+                "position": position,
+                "status": "OUT" if "OUT" in status else "DOUBT",
+                "stars": star_rating,
+                "icon": icon,
+                "is_qb": is_qb
+            })
+    
+    # Sort by star rating (highest first), then by QB status
+    key_injuries.sort(key=lambda x: (x['stars'], x['is_qb']), reverse=True)
+    return key_injuries[:12]  # Top 12 injuries
+
+key_injuries = get_key_injuries(injuries)
+
+if key_injuries:
+    # Display in 3-column grid
+    cols = st.columns(3)
+    for i, inj in enumerate(key_injuries):
+        with cols[i % 3]:
+            stars_display = "⭐" * inj['stars']
+            team_code = KALSHI_CODES.get(inj['team'], inj['team'][:3].upper())
+            
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:12px;border-radius:8px;border-left:3px solid #ff4444;margin-bottom:8px">
+                <div style="color:#ffaa00;font-size:0.9em">{stars_display} <b style="color:#fff">{inj['name']}</b> {inj['icon']}</div>
+                <div style="color:#ff6666;font-size:0.85em;margin-top:4px">{inj['status']} • {inj['team']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Show teams with multiple key injuries
+    injury_counts = {}
+    for inj in key_injuries:
+        injury_counts[inj['team']] = injury_counts.get(inj['team'], 0) + 1
+    
+    multi_injury_teams = [t for t, c in injury_counts.items() if c >= 2]
+    if multi_injury_teams:
+        teams_str = ", ".join(multi_injury_teams)
+        st.markdown(f"""
+        <div style="background:#1a2a3a;padding:10px;border-radius:6px;margin-top:10px">
+            <span style="color:#ff8888">⚠️ Multiple Key Injuries:</span> <span style="color:#ffaa00">{teams_str}</span>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.info("No major injuries reported")
+
+st.divider()
+
 # ========== ML PICKS ==========
-st.subheader("🎯 PRE-GAME ML PICKS")
+st.subheader("🎯 PRE-GAME NFL ML PICKS")
 
 ml_results = []
 for game_key, g in games.items():
@@ -918,4 +966,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.4")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.5")
