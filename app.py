@@ -295,13 +295,12 @@ def fetch_live_situation(event_id):
     """
     Fetch detailed play-by-play situation from ESPN.
     Returns ONLY snap-to-snap variables for LiveState.
-    
-    NFL uses plays endpoint, not situation object in summary.
-    We need the END of the last play = current pre-snap situation.
     """
     try:
-        # NFL uses the plays endpoint for live data - get most recent plays
-        plays_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/{event_id}/competitions/{event_id}/plays?limit=20"
+        cache_bust = int(time.time())
+        
+        # Use plays endpoint - most reliable
+        plays_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/{event_id}/competitions/{event_id}/plays?limit=5"
         resp = requests.get(plays_url, timeout=8)
         data = resp.json()
         
@@ -309,19 +308,17 @@ def fetch_live_situation(event_id):
         if not items:
             return None
         
-        # Get most recent play - use END state for current situation
+        # Get most recent play
         last_play = items[-1] if items else {}
         
-        # Use END of last play = current pre-snap situation
+        # Use END of last play for current situation
         end_state = last_play.get("end", {})
         start_state = last_play.get("start", {})
         
-        # Current situation is END of last play
         down = end_state.get("down", 0)
         distance = end_state.get("distance", 0)
         yards_to_endzone = end_state.get("yardsToEndzone", 50)
         
-        # If end state has no down (turnover, score, etc), use start of last play
         if down == 0:
             down = start_state.get("down", 0)
             distance = start_state.get("distance", 0)
@@ -330,19 +327,18 @@ def fetch_live_situation(event_id):
         quarter = last_play.get("period", {}).get("number", 0)
         clock_str = last_play.get("clock", {}).get("displayValue", "15:00")
         
-        # Parse clock to seconds
         try:
             parts = clock_str.split(":")
             clock_seconds = int(parts[0]) * 60 + int(parts[1])
         except:
             clock_seconds = 900
         
-        # Get team info from end state (current possession)
+        # Get team info
         poss_team_data = end_state.get("team", {}) or start_state.get("team", {})
         poss_team_name = poss_team_data.get("displayName", "")
         poss_team = TEAM_ABBREVS.get(poss_team_name, poss_team_name)
         
-        # Field position: yardsToEndzone is distance to OPPONENT end zone
+        # Field position
         yardline_100 = 100 - yards_to_endzone
         
         # Check for turnover
@@ -358,6 +354,7 @@ def fetch_live_situation(event_id):
             "down": down,
             "yards_to_go": distance,
             "yardline_100": yardline_100,
+            "yards_to_endzone": yards_to_endzone,
             "score_offense": 0,
             "score_defense": 0,
             "timeouts_offense": 3,
@@ -663,8 +660,10 @@ st.caption("Pre-game picks + LiveState in-game stress detection")
 # Sole purpose: Surface moments where market prices soften BEFORE the snap.
 
 live_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_IN_PROGRESS"}
+final_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_FINAL"}
 
-if live_games:
+# Show LiveState section if there are any live OR recently final games
+if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
@@ -677,6 +676,30 @@ if live_games:
         st.query_params["r"] = str(int(time.time()))
         st.rerun()
     
+    # ===== FINAL GAMES: Show resolved state =====
+    for game_key, g in final_games.items():
+        away_team, home_team = game_key.split("@")
+        winner = home_team if g['home_score'] > g['away_score'] else away_team
+        winner_code = KALSHI_CODES.get(winner, winner[:3].upper())
+        
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#1a2e1a,#0a1e0a);padding:18px;border-radius:12px;border:2px solid #44ff44;margin-bottom:15px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="flex:1"></div>
+                <div style="text-align:center;flex:2">
+                    <b style="color:#fff;font-size:1.3em">{g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']}</b>
+                </div>
+                <div style="text-align:right;flex:1">
+                    <b style="color:#44ff44;font-size:1.2em">✅ RESOLVED</b>
+                </div>
+            </div>
+            <div style="background:#000;padding:12px;border-radius:8px;font-family:monospace;margin-top:12px;text-align:center">
+                <span style="color:#44ff44;font-size:1.2em">FINAL | {winner_code} WIN | Uncertainty resolved</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # ===== LIVE GAMES: Show active tracking =====
     for game_key, g in live_games.items():
         event_id = g.get("event_id")
         if not event_id:
@@ -823,8 +846,9 @@ if live_games:
             </div>
             """, unsafe_allow_html=True)
             
-            # Zone indicator below field
-            st.markdown(f"<div style='text-align:center;color:{zone_color};font-weight:bold;margin-bottom:10px'>{field_zone} • {clock_pressure} Clock • {score_pressure}</div>", unsafe_allow_html=True)
+            # Zone indicator below field - include yard line for clarity
+            yards_to_go_txt = sit.get('yards_to_endzone', '?')
+            st.markdown(f"<div style='text-align:center;color:{zone_color};font-weight:bold;margin-bottom:10px'>{field_zone} • {def_code} {yards_to_go_txt} yard line • {score_pressure}</div>", unsafe_allow_html=True)
             
             # Show triggers if elevated
             if triggers:
