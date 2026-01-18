@@ -813,7 +813,7 @@ if live_games or final_games:
         parts = game_key.split("@")
         st.markdown(render_football_field(g.get('ball_yard', 50), g.get('down'), g.get('distance'), g.get('possession_team'), parts[0], parts[1], g.get('yards_to_endzone'), g.get('poss_text')), unsafe_allow_html=True)
         
-        with st.expander("📋 Recent Plays", expanded=False):
+        with st.expander("📋 Last 5 Plays", expanded=True):
             plays = fetch_play_by_play(g.get('event_id'))
             for p in plays:
                 scoring_style = "background:#1a3d1a;border-left:3px solid #00ff00;" if p['scoring'] else ""
