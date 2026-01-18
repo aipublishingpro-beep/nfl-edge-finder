@@ -724,40 +724,22 @@ if live_games:
             down_str = f"{sit['down']}" + ("st" if sit['down']==1 else "nd" if sit['down']==2 else "rd" if sit['down']==3 else "th")
             situation_line = f"Q{sit['quarter']} {sit['clock_display']} | {down_str} & {sit['yards_to_go']} | {sit['possession_team']} ball"
             
-            # Build visual field position (0-100 scale, left=own endzone, right=opponent endzone)
-            field_pct = sit['yardline_100']
-            ball_marker = "🏈"
+            # Build visual field using Streamlit progress bar style
+            field_pct = min(100, max(0, sit['yardline_100'])) / 100
             
-            # Field visualization HTML
-            field_html = f"""
-            <div style="position:relative;height:40px;background:linear-gradient(to right, 
-                #1a472a 0%, #1a472a 10%, 
-                #2d5a3d 10%, #2d5a3d 20%,
-                #1a472a 20%, #1a472a 30%,
-                #2d5a3d 30%, #2d5a3d 40%,
-                #1a472a 40%, #1a472a 50%,
-                #2d5a3d 50%, #2d5a3d 60%,
-                #1a472a 60%, #1a472a 70%,
-                #2d5a3d 70%, #2d5a3d 80%,
-                #1a472a 80%, #1a472a 90%,
-                #2d5a3d 90%, #2d5a3d 100%
-            );border-radius:6px;margin:10px 0;border:2px solid #444">
-                <!-- End zones -->
-                <div style="position:absolute;left:0;top:0;bottom:0;width:10%;background:#ff4444;opacity:0.3;border-radius:4px 0 0 4px"></div>
-                <div style="position:absolute;right:0;top:0;bottom:0;width:10%;background:#44ff44;opacity:0.3;border-radius:0 4px 4px 0"></div>
-                <!-- 50 yard line -->
-                <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;opacity:0.5"></div>
-                <!-- 20 yard lines (red zone markers) -->
-                <div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:#ff0;opacity:0.3"></div>
-                <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:#ff0;opacity:0.3"></div>
-                <!-- Ball position -->
-                <div style="position:absolute;left:{field_pct}%;top:50%;transform:translate(-50%,-50%);font-size:20px;filter:drop-shadow(0 0 3px #000)">{ball_marker}</div>
-                <!-- Yard markers -->
-                <div style="position:absolute;left:5%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">OWN</div>
-                <div style="position:absolute;left:48%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">50</div>
-                <div style="position:absolute;right:5%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">OPP</div>
-            </div>
-            """
+            # Determine ball position description
+            if sit['yardline_100'] >= 80:
+                field_zone = "🔴 RED ZONE"
+                zone_color = "#ff4444"
+            elif sit['yardline_100'] >= 60:
+                field_zone = "🟡 OPP TERRITORY"
+                zone_color = "#ffaa00"
+            elif sit['yardline_100'] >= 40:
+                field_zone = "⚪ MIDFIELD"
+                zone_color = "#888888"
+            else:
+                field_zone = "🔵 OWN TERRITORY"
+                zone_color = "#4488ff"
             
             # Determine CSS class
             if state_label == "MAX UNCERTAINTY":
@@ -781,14 +763,50 @@ if live_games:
                 <div style="background:#000;padding:12px;border-radius:8px;font-family:monospace;margin-bottom:12px">
                     <span style="color:#fff;font-size:1.1em">{situation_line}</span>
                 </div>
-                <div style="display:flex;gap:15px;flex-wrap:wrap">
-                    <span style="color:{field_color}">📍 {field_band}</span>
-                    <span style="color:{clock_color}">⏱️ Clock: {clock_pressure}</span>
-                    <span style="color:#ffaa44">📊 {score_pressure}</span>
-                    <span style="color:#88aaff">⏰ {sit['timeouts_offense']} TO</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Football field visualization
+            poss_team = sit['possession_team']
+            def_team = sit['defense_team'] or (g['away_team'] if poss_team == g['home_team'] else g['home_team'])
+            ball_yard = sit['yardline_100']
+            
+            # Create field with CSS
+            st.markdown(f"""
+            <div style="margin:10px 0;border-radius:8px;overflow:hidden;border:3px solid #333">
+                <!-- Field container -->
+                <div style="display:flex;height:60px;position:relative;background:#2d5a3d">
+                    <!-- Possession team end zone (left) -->
+                    <div style="width:12%;background:linear-gradient(135deg,#1a3a6e,#0a2a5e);display:flex;align-items:center;justify-content:center;border-right:3px solid #fff">
+                        <span style="color:#fff;font-weight:bold;font-size:11px;writing-mode:vertical-rl;transform:rotate(180deg)">{poss_team[:3].upper()}</span>
+                    </div>
+                    <!-- Playing field -->
+                    <div style="flex:1;position:relative;background:repeating-linear-gradient(90deg,#2d5a3d 0px,#2d5a3d 9.4%,#1a472a 9.4%,#1a472a 10%,#2d5a3d 10%,#2d5a3d 19.4%,#1a472a 19.4%,#1a472a 20%)">
+                        <!-- Yard numbers -->
+                        <div style="position:absolute;bottom:2px;left:10%;color:#fff;font-size:9px;opacity:0.7">10</div>
+                        <div style="position:absolute;bottom:2px;left:20%;color:#fff;font-size:9px;opacity:0.7">20</div>
+                        <div style="position:absolute;bottom:2px;left:30%;color:#fff;font-size:9px;opacity:0.7">30</div>
+                        <div style="position:absolute;bottom:2px;left:40%;color:#fff;font-size:9px;opacity:0.7">40</div>
+                        <div style="position:absolute;bottom:2px;left:50%;color:#fff;font-size:10px;opacity:0.9;transform:translateX(-50%)">50</div>
+                        <div style="position:absolute;bottom:2px;left:60%;color:#fff;font-size:9px;opacity:0.7">40</div>
+                        <div style="position:absolute;bottom:2px;left:70%;color:#fff;font-size:9px;opacity:0.7">30</div>
+                        <div style="position:absolute;bottom:2px;left:80%;color:#fff;font-size:9px;opacity:0.7">20</div>
+                        <div style="position:absolute;bottom:2px;left:90%;color:#fff;font-size:9px;opacity:0.7">10</div>
+                        <!-- Red zone shading -->
+                        <div style="position:absolute;right:0;top:0;bottom:0;width:20%;background:rgba(255,0,0,0.15)"></div>
+                        <!-- Ball marker -->
+                        <div style="position:absolute;left:{ball_yard}%;top:50%;transform:translate(-50%,-50%);font-size:22px;filter:drop-shadow(2px 2px 2px #000)">🏈</div>
+                    </div>
+                    <!-- Defense team end zone (right) -->
+                    <div style="width:12%;background:linear-gradient(135deg,#8b4513,#654321);display:flex;align-items:center;justify-content:center;border-left:3px solid #fff">
+                        <span style="color:#fff;font-weight:bold;font-size:11px;writing-mode:vertical-rl">{def_team[:3].upper()}</span>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Zone indicator below field
+            st.markdown(f"<div style='text-align:center;color:{zone_color};font-weight:bold;margin-bottom:10px'>{field_zone} • {clock_pressure} Clock • {score_pressure}</div>", unsafe_allow_html=True)
             
             # Show triggers if elevated
             if triggers:
