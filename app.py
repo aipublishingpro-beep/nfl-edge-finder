@@ -862,6 +862,9 @@ if live_games or final_games:
             if sit.get("play_text"):
                 st.caption(f"📝 {sit['play_text'][:100]}...")
             
+            # DEBUG: Show raw values so we can diagnose
+            st.caption(f"🔧 DEBUG: yardsToEndzone={sit.get('yards_to_endzone')} | yardline_100={sit.get('yardline_100')} | ball_yard={ball_yard}")
+            
             # Kalshi link
             parts = game_key.split("@")
             kalshi_url = build_kalshi_ml_url(parts[0], parts[1], g.get('game_date'))
