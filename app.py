@@ -722,7 +722,7 @@ with st.sidebar:
 | 🟠 **ELEVATED** | 1-4¢ |
 | 🟢 **NORMAL** | — |""")
     st.divider()
-    st.header("📖 ML LEGEND")
+    st.header("📖 MONEYLINE LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
     st.header("🧮 10-FACTOR MODEL")
@@ -1003,7 +1003,7 @@ if last_5:
 st.divider()
 
 # ========== ML PICKS ==========
-st.subheader("🎯 PRE-GAME NFL ML PICKS")
+st.subheader("🎯 PRE-GAME NFL MONEYLINE PICKS")
 
 ml_results = []
 for game_key, g in games.items():
