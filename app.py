@@ -724,6 +724,41 @@ if live_games:
             down_str = f"{sit['down']}" + ("st" if sit['down']==1 else "nd" if sit['down']==2 else "rd" if sit['down']==3 else "th")
             situation_line = f"Q{sit['quarter']} {sit['clock_display']} | {down_str} & {sit['yards_to_go']} | {sit['possession_team']} ball"
             
+            # Build visual field position (0-100 scale, left=own endzone, right=opponent endzone)
+            field_pct = sit['yardline_100']
+            ball_marker = "🏈"
+            
+            # Field visualization HTML
+            field_html = f"""
+            <div style="position:relative;height:40px;background:linear-gradient(to right, 
+                #1a472a 0%, #1a472a 10%, 
+                #2d5a3d 10%, #2d5a3d 20%,
+                #1a472a 20%, #1a472a 30%,
+                #2d5a3d 30%, #2d5a3d 40%,
+                #1a472a 40%, #1a472a 50%,
+                #2d5a3d 50%, #2d5a3d 60%,
+                #1a472a 60%, #1a472a 70%,
+                #2d5a3d 70%, #2d5a3d 80%,
+                #1a472a 80%, #1a472a 90%,
+                #2d5a3d 90%, #2d5a3d 100%
+            );border-radius:6px;margin:10px 0;border:2px solid #444">
+                <!-- End zones -->
+                <div style="position:absolute;left:0;top:0;bottom:0;width:10%;background:#ff4444;opacity:0.3;border-radius:4px 0 0 4px"></div>
+                <div style="position:absolute;right:0;top:0;bottom:0;width:10%;background:#44ff44;opacity:0.3;border-radius:0 4px 4px 0"></div>
+                <!-- 50 yard line -->
+                <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;opacity:0.5"></div>
+                <!-- 20 yard lines (red zone markers) -->
+                <div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:#ff0;opacity:0.3"></div>
+                <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:#ff0;opacity:0.3"></div>
+                <!-- Ball position -->
+                <div style="position:absolute;left:{field_pct}%;top:50%;transform:translate(-50%,-50%);font-size:20px;filter:drop-shadow(0 0 3px #000)">{ball_marker}</div>
+                <!-- Yard markers -->
+                <div style="position:absolute;left:5%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">OWN</div>
+                <div style="position:absolute;left:48%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">50</div>
+                <div style="position:absolute;right:5%;bottom:2px;color:#fff;font-size:9px;opacity:0.6">OPP</div>
+            </div>
+            """
+            
             # Determine CSS class
             if state_label == "MAX UNCERTAINTY":
                 css_class = "uncertainty-max"
