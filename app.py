@@ -94,36 +94,39 @@ TEAM_ABBREVS = {
     "Tennessee Titans": "Tennessee", "Washington Commanders": "Washington"
 }
 
+# Reverse lookup: short name to Kalshi code
+SHORT_TO_KALSHI = {v: k for k, v in KALSHI_CODES.items()}
+
 TEAM_STATS = {
     "Arizona": {"dvoa": -8.5, "def_rank": 28, "home_win_pct": 0.45},
     "Atlanta": {"dvoa": 2.5, "def_rank": 20, "home_win_pct": 0.55},
     "Baltimore": {"dvoa": 12.5, "def_rank": 2, "home_win_pct": 0.72},
     "Buffalo": {"dvoa": 15.8, "def_rank": 4, "home_win_pct": 0.78},
     "Carolina": {"dvoa": -12.5, "def_rank": 26, "home_win_pct": 0.38},
-    "Chicago": {"dvoa": -5.2, "def_rank": 18, "home_win_pct": 0.48},
+    "Chicago": {"dvoa": 8.5, "def_rank": 10, "home_win_pct": 0.65},
     "Cincinnati": {"dvoa": 5.8, "def_rank": 12, "home_win_pct": 0.58},
     "Cleveland": {"dvoa": -2.5, "def_rank": 15, "home_win_pct": 0.52},
     "Dallas": {"dvoa": 3.2, "def_rank": 14, "home_win_pct": 0.62},
-    "Denver": {"dvoa": 4.5, "def_rank": 8, "home_win_pct": 0.68},
+    "Denver": {"dvoa": 12.5, "def_rank": 3, "home_win_pct": 0.75},
     "Detroit": {"dvoa": 18.5, "def_rank": 6, "home_win_pct": 0.75},
     "Green Bay": {"dvoa": 8.2, "def_rank": 10, "home_win_pct": 0.70},
-    "Houston": {"dvoa": 6.5, "def_rank": 16, "home_win_pct": 0.58},
+    "Houston": {"dvoa": 6.5, "def_rank": 8, "home_win_pct": 0.58},
     "Indianapolis": {"dvoa": -6.8, "def_rank": 22, "home_win_pct": 0.48},
     "Jacksonville": {"dvoa": -4.5, "def_rank": 19, "home_win_pct": 0.45},
     "Kansas City": {"dvoa": 22.5, "def_rank": 7, "home_win_pct": 0.82},
     "Las Vegas": {"dvoa": -8.2, "def_rank": 25, "home_win_pct": 0.45},
     "LA Chargers": {"dvoa": 7.8, "def_rank": 9, "home_win_pct": 0.55},
-    "LA Rams": {"dvoa": 1.5, "def_rank": 17, "home_win_pct": 0.52},
+    "LA Rams": {"dvoa": 5.5, "def_rank": 14, "home_win_pct": 0.55},
     "Miami": {"dvoa": 5.2, "def_rank": 13, "home_win_pct": 0.62},
     "Minnesota": {"dvoa": 10.5, "def_rank": 11, "home_win_pct": 0.68},
-    "New England": {"dvoa": -10.5, "def_rank": 24, "home_win_pct": 0.42},
+    "New England": {"dvoa": 9.5, "def_rank": 5, "home_win_pct": 0.70},
     "New Orleans": {"dvoa": -3.8, "def_rank": 21, "home_win_pct": 0.55},
     "NY Giants": {"dvoa": -15.5, "def_rank": 30, "home_win_pct": 0.35},
     "NY Jets": {"dvoa": -7.5, "def_rank": 23, "home_win_pct": 0.42},
     "Philadelphia": {"dvoa": 14.8, "def_rank": 3, "home_win_pct": 0.75},
     "Pittsburgh": {"dvoa": 2.8, "def_rank": 5, "home_win_pct": 0.65},
-    "San Francisco": {"dvoa": 16.5, "def_rank": 1, "home_win_pct": 0.78},
-    "Seattle": {"dvoa": 0.5, "def_rank": 27, "home_win_pct": 0.58},
+    "San Francisco": {"dvoa": 10.5, "def_rank": 6, "home_win_pct": 0.68},
+    "Seattle": {"dvoa": 14.5, "def_rank": 2, "home_win_pct": 0.78},
     "Tampa Bay": {"dvoa": 4.2, "def_rank": 29, "home_win_pct": 0.55},
     "Tennessee": {"dvoa": -9.8, "def_rank": 31, "home_win_pct": 0.42},
     "Washington": {"dvoa": 9.5, "def_rank": 8, "home_win_pct": 0.62}
@@ -140,11 +143,11 @@ STAR_PLAYERS = {
     "Jacksonville": ["Trevor Lawrence"], "Kansas City": ["Patrick Mahomes", "Travis Kelce"],
     "Las Vegas": ["Gardner Minshew"], "LA Chargers": ["Justin Herbert"],
     "LA Rams": ["Matthew Stafford", "Puka Nacua"], "Miami": ["Tua Tagovailoa", "Tyreek Hill"],
-    "Minnesota": ["Sam Darnold", "Justin Jefferson"], "New England": ["Drake Maye"],
+    "Minnesota": ["J.J. McCarthy", "Justin Jefferson"], "New England": ["Drake Maye"],
     "New Orleans": ["Derek Carr"], "NY Giants": ["Daniel Jones"],
     "NY Jets": ["Aaron Rodgers"], "Philadelphia": ["Jalen Hurts", "Saquon Barkley"],
     "Pittsburgh": ["Russell Wilson"], "San Francisco": ["Brock Purdy", "Christian McCaffrey"],
-    "Seattle": ["Geno Smith"], "Tampa Bay": ["Baker Mayfield"],
+    "Seattle": ["Sam Darnold", "Jaxon Smith-Njigba"], "Tampa Bay": ["Baker Mayfield"],
     "Tennessee": ["Will Levis"], "Washington": ["Jayden Daniels"]
 }
 
@@ -159,34 +162,40 @@ def build_kalshi_ml_url(away_team, home_team, game_date=None):
     return f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
 
 # ========== FOOTBALL FIELD VISUALIZATION ==========
-def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team):
-    """Render football field with ball position. ball_yard is 0-100 (away endzone to home endzone)"""
-    
-    # Clamp ball position
+def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team, yards_to_endzone=None, poss_text=None):
+    """
+    Render football field with ball position.
+    ball_yard: 0-100 scale where 0=away endzone, 100=home endzone
+    """
     ball_yard = max(0, min(100, ball_yard))
-    # Scale ball_yard (0-100) to visual field (10%-90%) since endzones are 0-10% and 90-100%
-    ball_pct = 10 + (ball_yard / 100) * 80  # 0->10%, 50->50%, 100->90%
+    ball_pct = 10 + (ball_yard / 100) * 80
     
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
     
-    # Down and distance text
     if down and distance:
         situation = f"{down} & {distance}"
     else:
         situation = "—"
     
-    # Possession indicator
     poss_code = KALSHI_CODES.get(possession_team, "???") if possession_team else "???"
+    
+    # Show ball location text
+    if poss_text:
+        ball_loc = poss_text
+    elif yards_to_endzone:
+        ball_loc = f"{yards_to_endzone} to go"
+    else:
+        ball_loc = ""
     
     field_html = f"""
     <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
             <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball</span>
+            <span style="color:#aaa">{ball_loc}</span>
             <span style="color:#fff;font-weight:bold">{situation}</span>
         </div>
         <div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
-            <!-- Yard lines -->
             <div style="position:absolute;left:10%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:30%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
@@ -196,9 +205,7 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
             <div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <!-- Ball -->
             <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);font-size:24px;text-shadow:0 0 10px #fff">🏈</div>
-            <!-- Endzone labels -->
             <div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
             <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div>
         </div>
@@ -234,47 +241,59 @@ def fetch_espn_scores():
                 continue
             home_team, away_team, home_score, away_score = None, None, 0, 0
             home_id, away_id = None, None
+            home_abbrev, away_abbrev = None, None
             for c in competitors:
                 name = c.get("team", {}).get("displayName", "")
                 team_name = TEAM_ABBREVS.get(name, name)
                 team_id = c.get("team", {}).get("id", "")
+                team_abbrev = c.get("team", {}).get("abbreviation", "")
                 score = int(c.get("score", 0) or 0)
                 if c.get("homeAway") == "home":
-                    home_team, home_score, home_id = team_name, score, team_id
+                    home_team, home_score, home_id, home_abbrev = team_name, score, team_id, team_abbrev
                 else:
-                    away_team, away_score, away_id = team_name, score, team_id
+                    away_team, away_score, away_id, away_abbrev = team_name, score, team_id, team_abbrev
             
             status_obj = event.get("status", {})
             status_type = status_obj.get("type", {}).get("name", "STATUS_SCHEDULED")
             clock = status_obj.get("displayClock", "")
             period = status_obj.get("period", 0)
             
-            # Get situation data (field position, down, distance)
+            # Get situation data
             situation = comp.get("situation", {})
             down = situation.get("down")
             distance = situation.get("distance")
             yard_line = situation.get("yardLine", 50)
+            yards_to_endzone = situation.get("yardsToEndzone", 50)
             possession_id = situation.get("possession", "")
             is_red_zone = situation.get("isRedZone", False)
+            poss_text = situation.get("possessionText", "")
+            down_distance_text = situation.get("downDistanceText", "")
             
             # Determine possession team
             if possession_id == home_id:
                 possession_team = home_team
+                is_home_possession = True
             elif possession_id == away_id:
                 possession_team = away_team
+                is_home_possession = False
             else:
                 possession_team = None
+                is_home_possession = None
             
-            # Calculate ball position (0-100 scale, away endzone to home endzone)
-            # yardLine from ESPN is yards from the goal line they're attacking
-            if possession_team == home_team:
-                # Home team attacks away endzone (left side), so lower yard = closer to left
-                ball_yard = yard_line
-            elif possession_team == away_team:
-                # Away team attacks home endzone (right side), so lower yard = closer to right
-                ball_yard = 100 - yard_line
+            # FIXED BALL POSITION CALCULATION
+            # Field: 0 = away endzone (left), 100 = home endzone (right)
+            # yardsToEndzone = distance from scoring
+            # Away team attacks toward 100 (home endzone)
+            # Home team attacks toward 0 (away endzone)
+            if yards_to_endzone is not None and is_home_possession is not None:
+                if is_home_possession:
+                    # Home team attacks left (toward 0), so ball is at yardsToEndzone from 0
+                    ball_yard = yards_to_endzone
+                else:
+                    # Away team attacks right (toward 100), so ball is at 100 - yardsToEndzone
+                    ball_yard = 100 - yards_to_endzone
             else:
-                ball_yard = 50  # Default to midfield
+                ball_yard = 50
             
             game_date_str = event.get("date", "")
             try:
@@ -288,12 +307,15 @@ def fetch_espn_scores():
                 "away_team": away_team, "home_team": home_team,
                 "away_score": away_score, "home_score": home_score,
                 "away_id": away_id, "home_id": home_id,
+                "away_abbrev": away_abbrev, "home_abbrev": home_abbrev,
                 "total": away_score + home_score,
                 "period": period, "clock": clock, "status_type": status_type,
                 "game_date": game_date,
                 "down": down, "distance": distance, "yard_line": yard_line,
+                "yards_to_endzone": yards_to_endzone,
                 "ball_yard": ball_yard, "possession_team": possession_team,
-                "is_red_zone": is_red_zone
+                "is_red_zone": is_red_zone, "poss_text": poss_text,
+                "down_distance_text": down_distance_text
             }
         return games
     except Exception as e:
@@ -435,7 +457,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.6 NFL EDGE")
+    st.caption("v1.7 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -450,7 +472,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.6")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -484,7 +506,6 @@ if live_games or final_games:
         home_score = g['home_score']
         score_diff = abs(home_score - away_score)
         
-        # Score pressure
         if score_diff >= 17:
             score_pressure = "Blowout"
         elif score_diff >= 9:
@@ -492,8 +513,7 @@ if live_games or final_games:
         else:
             score_pressure = "One Poss"
         
-        # Uncertainty based on quarter and score
-        if quarter >= 5:  # Overtime
+        if quarter >= 5:
             state_label = "MAX UNCERTAINTY"
             state_color = "#ff0000"
             expected_leak = "3-7¢"
@@ -512,7 +532,6 @@ if live_games or final_games:
             q_display = f"Q{quarter}"
             clock_pressure = f"Q{quarter}"
         
-        # Red zone boost
         if g.get('is_red_zone'):
             clock_pressure += " 🔴 RED ZONE"
         
@@ -545,8 +564,10 @@ if live_games or final_games:
             g.get('down'),
             g.get('distance'),
             g.get('possession_team'),
-            parts[0],  # away
-            parts[1]   # home
+            parts[0],
+            parts[1],
+            g.get('yards_to_endzone'),
+            g.get('poss_text')
         )
         st.markdown(field_html, unsafe_allow_html=True)
         
@@ -560,7 +581,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.6")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -762,4 +783,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.6")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7")
