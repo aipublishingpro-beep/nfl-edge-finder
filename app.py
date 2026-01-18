@@ -607,7 +607,7 @@ def calc_ml_score(home_team, away_team, injuries, weather_data, last_5, last_gam
     home_hw = home.get('home_win_pct', 0.5)
     if home_hw > 0.65:
         score_home += 0.8
-        reasons_home.append(f"🏟️ {int(home_hw*100)}% HW")
+        reasons_home.append(f"🏟️ {int(home_hw*100)}% Home Win")
     
     # FACTOR 6: WEATHER GATE (1.5 pts) - NEW!
     if weather_data and not weather_data.get("dome"):
