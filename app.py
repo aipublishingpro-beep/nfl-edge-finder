@@ -1074,12 +1074,25 @@ if ml_results:
                 injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['home'], 'HME')}: {home_inj_str}</span>")
             injury_html = f"<div style='color:#ff8888;font-size:0.8em;margin-top:4px'>🏥 {' | '.join(injury_parts)}</div>"
         
-        # DVOA display for both teams
+        # DVOA display for both teams (PICK first, then opponent)
         home_dvoa = r.get("home_dvoa", 0)
         away_dvoa = r.get("away_dvoa", 0)
-        home_dvoa_color = "#00ff00" if home_dvoa >= 10 else "#ffff00" if home_dvoa >= 0 else "#ff6666"
-        away_dvoa_color = "#00ff00" if away_dvoa >= 10 else "#ffff00" if away_dvoa >= 0 else "#ff6666"
-        dvoa_html = f"<div style='font-size:0.8em;margin-top:4px'>📊 DVOA: <span style='color:{away_dvoa_color}'>{KALSHI_CODES.get(r['away'], 'AWY')} {away_dvoa:+.1f}%</span> vs <span style='color:{home_dvoa_color}'>{KALSHI_CODES.get(r['home'], 'HME')} {home_dvoa:+.1f}%</span></div>"
+        
+        # Determine which is pick and which is opponent
+        if pick_team == r["home"]:
+            pick_dvoa = home_dvoa
+            opp_dvoa = away_dvoa
+            pick_code = KALSHI_CODES.get(r["home"], "HME")
+            opp_code = KALSHI_CODES.get(r["away"], "AWY")
+        else:
+            pick_dvoa = away_dvoa
+            opp_dvoa = home_dvoa
+            pick_code = KALSHI_CODES.get(r["away"], "AWY")
+            opp_code = KALSHI_CODES.get(r["home"], "HME")
+        
+        pick_dvoa_color = "#00ff00" if pick_dvoa >= 10 else "#ffff00" if pick_dvoa >= 0 else "#ff6666"
+        opp_dvoa_color = "#00ff00" if opp_dvoa >= 10 else "#ffff00" if opp_dvoa >= 0 else "#ff6666"
+        dvoa_html = f"<div style='font-size:0.8em;margin-top:4px'>📊 DVOA: <span style='color:{pick_dvoa_color}'>{pick_code} {pick_dvoa:+.1f}%</span> vs <span style='color:{opp_dvoa_color}'>{opp_code} {opp_dvoa:+.1f}%</span></div>"
         
         st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:10px 12px;margin-bottom:4px;border-radius:6px;border-left:3px solid {r['color']}">
         <div style="display:flex;justify-content:space-between;align-items:center">
