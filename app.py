@@ -739,6 +739,18 @@ with st.sidebar:
 10. 📅 Short Week
 """)
     st.divider()
+    st.header("📊 DVOA GUIDE")
+    st.caption("Defense-adjusted Value Over Average")
+    st.markdown("""
+| DVOA | Meaning |
+|------|---------|
+| **+20%+** | Elite |
+| **+10-20%** | Playoff |
+| **0-10%** | Above Avg |
+| **-10-0%** | Below Avg |
+| **-10%−** | Bad |
+""")
+    st.divider()
     st.caption("v1.8.2 NFL EDGE")
 
 # ========== TITLE ==========
@@ -753,7 +765,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1049,10 +1061,10 @@ if ml_results:
         if home_out or away_out:
             injury_parts = []
             if away_out:
-                away_inj_str = ", ".join([p.replace("🚨 ", "") for p in away_out[:2]])
+                away_inj_str = ", ".join([p.replace("🚨 ", "") + " OUT" for p in away_out[:2]])
                 injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['away'], 'AWY')}: {away_inj_str}</span>")
             if home_out:
-                home_inj_str = ", ".join([p.replace("🚨 ", "") for p in home_out[:2]])
+                home_inj_str = ", ".join([p.replace("🚨 ", "") + " OUT" for p in home_out[:2]])
                 injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['home'], 'HME')}: {home_inj_str}</span>")
             injury_html = f"<div style='color:#ff8888;font-size:0.8em;margin-top:4px'>🏥 {' | '.join(injury_parts)}</div>"
         
@@ -1122,4 +1134,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.8.1")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.8.2")
