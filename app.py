@@ -104,38 +104,38 @@ PASS_HEAVY_TEAMS = ["Buffalo", "Cincinnati", "Miami", "Tampa Bay", "LA Chargers"
 RUN_HEAVY_TEAMS = ["Baltimore", "San Francisco", "Cleveland", "Tennessee", "Denver"]
 
 TEAM_STATS = {
-    "Arizona": {"dvoa": -8.5, "def_rank": 28, "home_win_pct": 0.45},
-    "Atlanta": {"dvoa": 2.5, "def_rank": 20, "home_win_pct": 0.55},
-    "Baltimore": {"dvoa": 12.5, "def_rank": 2, "home_win_pct": 0.72},
-    "Buffalo": {"dvoa": 15.8, "def_rank": 4, "home_win_pct": 0.78},
-    "Carolina": {"dvoa": -12.5, "def_rank": 26, "home_win_pct": 0.38},
-    "Chicago": {"dvoa": 8.5, "def_rank": 10, "home_win_pct": 0.65},
-    "Cincinnati": {"dvoa": 5.8, "def_rank": 12, "home_win_pct": 0.58},
-    "Cleveland": {"dvoa": -2.5, "def_rank": 15, "home_win_pct": 0.52},
-    "Dallas": {"dvoa": 3.2, "def_rank": 14, "home_win_pct": 0.62},
-    "Denver": {"dvoa": 12.5, "def_rank": 3, "home_win_pct": 0.75},
-    "Detroit": {"dvoa": 18.5, "def_rank": 6, "home_win_pct": 0.75},
-    "Green Bay": {"dvoa": 8.2, "def_rank": 10, "home_win_pct": 0.70},
-    "Houston": {"dvoa": 6.5, "def_rank": 8, "home_win_pct": 0.58},
-    "Indianapolis": {"dvoa": -6.8, "def_rank": 22, "home_win_pct": 0.48},
-    "Jacksonville": {"dvoa": -4.5, "def_rank": 19, "home_win_pct": 0.45},
-    "Kansas City": {"dvoa": 22.5, "def_rank": 7, "home_win_pct": 0.82},
-    "Las Vegas": {"dvoa": -8.2, "def_rank": 25, "home_win_pct": 0.45},
-    "LA Chargers": {"dvoa": 7.8, "def_rank": 9, "home_win_pct": 0.55},
-    "LA Rams": {"dvoa": 5.5, "def_rank": 14, "home_win_pct": 0.55},
-    "Miami": {"dvoa": 5.2, "def_rank": 13, "home_win_pct": 0.62},
-    "Minnesota": {"dvoa": 10.5, "def_rank": 11, "home_win_pct": 0.68},
-    "New England": {"dvoa": 9.5, "def_rank": 5, "home_win_pct": 0.70},
-    "New Orleans": {"dvoa": -3.8, "def_rank": 21, "home_win_pct": 0.55},
-    "NY Giants": {"dvoa": -15.5, "def_rank": 30, "home_win_pct": 0.35},
-    "NY Jets": {"dvoa": -7.5, "def_rank": 23, "home_win_pct": 0.42},
-    "Philadelphia": {"dvoa": 14.8, "def_rank": 3, "home_win_pct": 0.75},
-    "Pittsburgh": {"dvoa": 2.8, "def_rank": 5, "home_win_pct": 0.65},
-    "San Francisco": {"dvoa": 10.5, "def_rank": 6, "home_win_pct": 0.68},
-    "Seattle": {"dvoa": 14.5, "def_rank": 2, "home_win_pct": 0.78},
-    "Tampa Bay": {"dvoa": 4.2, "def_rank": 29, "home_win_pct": 0.55},
-    "Tennessee": {"dvoa": -9.8, "def_rank": 31, "home_win_pct": 0.42},
-    "Washington": {"dvoa": 9.5, "def_rank": 8, "home_win_pct": 0.62}
+    "Arizona": {"dvoa": -8.5, "def_rank": 28, "home_win_pct": 0.45, "away_win_pct": 0.35},
+    "Atlanta": {"dvoa": 2.5, "def_rank": 20, "home_win_pct": 0.55, "away_win_pct": 0.45},
+    "Baltimore": {"dvoa": 12.5, "def_rank": 2, "home_win_pct": 0.72, "away_win_pct": 0.65},
+    "Buffalo": {"dvoa": 15.8, "def_rank": 4, "home_win_pct": 0.78, "away_win_pct": 0.68},
+    "Carolina": {"dvoa": -12.5, "def_rank": 26, "home_win_pct": 0.38, "away_win_pct": 0.25},
+    "Chicago": {"dvoa": 8.5, "def_rank": 10, "home_win_pct": 0.65, "away_win_pct": 0.45},
+    "Cincinnati": {"dvoa": 5.8, "def_rank": 12, "home_win_pct": 0.58, "away_win_pct": 0.50},
+    "Cleveland": {"dvoa": -2.5, "def_rank": 15, "home_win_pct": 0.52, "away_win_pct": 0.38},
+    "Dallas": {"dvoa": 3.2, "def_rank": 14, "home_win_pct": 0.62, "away_win_pct": 0.42},
+    "Denver": {"dvoa": 12.5, "def_rank": 3, "home_win_pct": 0.75, "away_win_pct": 0.55},
+    "Detroit": {"dvoa": 18.5, "def_rank": 6, "home_win_pct": 0.75, "away_win_pct": 0.62},
+    "Green Bay": {"dvoa": 8.2, "def_rank": 10, "home_win_pct": 0.70, "away_win_pct": 0.55},
+    "Houston": {"dvoa": 6.5, "def_rank": 8, "home_win_pct": 0.58, "away_win_pct": 0.50},
+    "Indianapolis": {"dvoa": -6.8, "def_rank": 22, "home_win_pct": 0.48, "away_win_pct": 0.35},
+    "Jacksonville": {"dvoa": -4.5, "def_rank": 19, "home_win_pct": 0.45, "away_win_pct": 0.32},
+    "Kansas City": {"dvoa": 22.5, "def_rank": 7, "home_win_pct": 0.82, "away_win_pct": 0.72},
+    "Las Vegas": {"dvoa": -8.2, "def_rank": 25, "home_win_pct": 0.45, "away_win_pct": 0.30},
+    "LA Chargers": {"dvoa": 7.8, "def_rank": 9, "home_win_pct": 0.55, "away_win_pct": 0.48},
+    "LA Rams": {"dvoa": 5.5, "def_rank": 14, "home_win_pct": 0.55, "away_win_pct": 0.45},
+    "Miami": {"dvoa": 5.2, "def_rank": 13, "home_win_pct": 0.62, "away_win_pct": 0.40},
+    "Minnesota": {"dvoa": 10.5, "def_rank": 11, "home_win_pct": 0.68, "away_win_pct": 0.55},
+    "New England": {"dvoa": 9.5, "def_rank": 5, "home_win_pct": 0.70, "away_win_pct": 0.52},
+    "New Orleans": {"dvoa": -3.8, "def_rank": 21, "home_win_pct": 0.55, "away_win_pct": 0.38},
+    "NY Giants": {"dvoa": -15.5, "def_rank": 30, "home_win_pct": 0.35, "away_win_pct": 0.22},
+    "NY Jets": {"dvoa": -7.5, "def_rank": 23, "home_win_pct": 0.42, "away_win_pct": 0.30},
+    "Philadelphia": {"dvoa": 14.8, "def_rank": 3, "home_win_pct": 0.75, "away_win_pct": 0.62},
+    "Pittsburgh": {"dvoa": 2.8, "def_rank": 5, "home_win_pct": 0.65, "away_win_pct": 0.48},
+    "San Francisco": {"dvoa": 10.5, "def_rank": 6, "home_win_pct": 0.68, "away_win_pct": 0.58},
+    "Seattle": {"dvoa": 14.5, "def_rank": 2, "home_win_pct": 0.78, "away_win_pct": 0.55},
+    "Tampa Bay": {"dvoa": 4.2, "def_rank": 29, "home_win_pct": 0.55, "away_win_pct": 0.42},
+    "Tennessee": {"dvoa": -9.8, "def_rank": 31, "home_win_pct": 0.42, "away_win_pct": 0.28},
+    "Washington": {"dvoa": 9.5, "def_rank": 8, "home_win_pct": 0.62, "away_win_pct": 0.50}
 }
 
 STAR_PLAYERS = {
@@ -560,7 +560,7 @@ def get_injury_score(team, injuries):
     return score, out_players, qb_out
 
 def calc_ml_score(home_team, away_team, injuries, weather_data, last_5, last_games, game_date):
-    """Enhanced 9-factor scoring system"""
+    """Enhanced 10-factor scoring system"""
     home = TEAM_STATS.get(home_team, {})
     away = TEAM_STATS.get(away_team, {})
     
@@ -609,7 +609,17 @@ def calc_ml_score(home_team, away_team, injuries, weather_data, last_5, last_gam
         score_home += 0.8
         reasons_home.append(f"🏟️ {int(home_hw*100)}% Home Win")
     
-    # FACTOR 6: WEATHER GATE (1.5 pts) - NEW!
+    # FACTOR 6: Away Win % (0.8 pts) - Road Warriors vs Road Kills
+    away_aw = away.get('away_win_pct', 0.5)
+    home_aw = home.get('away_win_pct', 0.5)
+    if away_aw >= 0.60:
+        score_away += 0.8
+        reasons_away.append(f"✈️ {int(away_aw*100)}% Road Win")
+    elif away_aw <= 0.35:
+        score_home += 0.6
+        reasons_home.append(f"✈️ Opp {int(away_aw*100)}% Road")
+    
+    # FACTOR 7: WEATHER GATE (1.5 pts)
     if weather_data and not weather_data.get("dome"):
         wind = weather_data.get("wind", 0)
         precip = weather_data.get("precip", 0)
@@ -630,7 +640,7 @@ def calc_ml_score(home_team, away_team, injuries, weather_data, last_5, last_gam
                 score_away += 0.8
                 reasons_away.append("🏃 Run Game")
     
-    # FACTOR 7: REST DAYS (1.2 pts) - NEW!
+    # FACTOR 8: REST DAYS (1.2 pts)
     if game_date and last_games:
         home_rest = get_rest_days(home_team, game_date, last_games)
         away_rest = get_rest_days(away_team, game_date, last_games)
@@ -651,7 +661,7 @@ def calc_ml_score(home_team, away_team, injuries, weather_data, last_5, last_gam
             score_home += 0.5
             reasons_home.append("📅 Short Week")
     
-    # FACTOR 8: RECENT FORM - Last 5 (1.5 pts) - NEW!
+    # FACTOR 9: RECENT FORM - Last 5 (1.5 pts)
     if last_5:
         home_form = last_5.get(home_team, {})
         away_form = last_5.get(away_team, {})
@@ -715,24 +725,25 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.header("🧮 9-FACTOR MODEL")
+    st.header("🧮 10-FACTOR MODEL")
     st.markdown("""
 1. 📊 DVOA Rating
 2. 🛡️ Defense Rank
 3. 🏠 Home Field
 4. 🏥 Injuries
 5. 🏟️ Home Win %
-6. 🌧️ Weather Gate
-7. 😴 Rest Days
-8. 🔥 Recent Form
-9. 📅 Short Week
+6. ✈️ Away Win %
+7. 🌧️ Weather Gate
+8. 😴 Rest Days
+9. 🔥 Recent Form
+10. 📅 Short Week
 """)
     st.divider()
-    st.caption("v1.8.0 NFL EDGE")
+    st.caption("v1.8.2 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("9-Factor ML Model + LiveState Tracker")
+st.caption("10-Factor ML Model + LiveState Tracker")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -742,7 +753,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -997,7 +1008,7 @@ for game_key, g in games.items():
         ml_results.append({
             "pick": pick, "score": score, "color": color, "reasons": reasons,
             "away": away, "home": home, "game_date": g.get('game_date'), "game_key": game_key,
-            "weather": weather_data
+            "weather": weather_data, "home_out": home_out, "away_out": away_out
         })
     except:
         continue
@@ -1031,13 +1042,28 @@ if ml_results:
         ticker = f"KXNFLGAME-{date_str}{away_code}{home_code}"
         this_url = f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
         
+        # Build injury display
+        home_out = r.get("home_out", [])
+        away_out = r.get("away_out", [])
+        injury_html = ""
+        if home_out or away_out:
+            injury_parts = []
+            if away_out:
+                away_inj_str = ", ".join([p.replace("🚨 ", "") for p in away_out[:2]])
+                injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['away'], 'AWY')}: {away_inj_str}</span>")
+            if home_out:
+                home_inj_str = ", ".join([p.replace("🚨 ", "") for p in home_out[:2]])
+                injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['home'], 'HME')}: {home_inj_str}</span>")
+            injury_html = f"<div style='color:#ff8888;font-size:0.8em;margin-top:4px'>🏥 {' | '.join(injury_parts)}</div>"
+        
         st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:10px 12px;margin-bottom:4px;border-radius:6px;border-left:3px solid {r['color']}">
         <div style="display:flex;justify-content:space-between;align-items:center">
             <div><b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span></div>
             <div><span style="background:#1e3a5f;padding:2px 8px;border-radius:4px;color:#88ccff;font-size:0.8em;margin-right:8px">{weather_badge}</span>
             <span style="color:#38bdf8;font-weight:bold">{r['score']}/10</span></div>
         </div>
-        <div style="color:#777;font-size:0.85em;margin-top:4px">{reasons_str}</div></div>""", unsafe_allow_html=True)
+        <div style="color:#777;font-size:0.85em;margin-top:4px">{reasons_str}</div>
+        {injury_html}</div>""", unsafe_allow_html=True)
         
         st.link_button(f"BUY {pick_code}", this_url, use_container_width=True)
 else:
@@ -1096,4 +1122,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.8.0")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.8.1")
