@@ -659,11 +659,9 @@ st.caption("Pre-game picks + LiveState in-game stress detection")
 # NOT GameCast. NOT play-by-play. NOT predictions.
 # Sole purpose: Surface moments where market prices soften BEFORE the snap.
 
-live_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_IN_PROGRESS"}
+# Simple: if period > 0 and not final, it's live
+live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
 final_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_FINAL"}
-
-# Debug: Show what games we have
-st.sidebar.caption(f"Live: {len(live_games)} | Final: {len(final_games)}")
 
 # Show LiveState section if there are any live OR recently final games
 if live_games or final_games:
