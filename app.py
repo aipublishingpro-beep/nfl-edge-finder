@@ -164,8 +164,29 @@ TEAM_ABBREVS = {
 
 # ========== UNCERTAINTY DETECTION ENGINE ==========
 
+def normalize_yardline(yard_line, poss_team, home_team, is_red_zone=False):
+    """
+    Normalize yardline to distance-to-opponent-end-zone (0-100 scale).
+    0 = own goal line, 100 = opponent goal line.
+    ESPN yardLine is raw field position (0-50), need context to normalize.
+    """
+    if yard_line is None:
+        return 50  # Default to midfield if unknown
+    
+    # ESPN red zone flag is reliable when present
+    if is_red_zone:
+        return max(80, 100 - yard_line)
+    
+    # If yardline > 50, ESPN already normalized it in some endpoints
+    if yard_line > 50:
+        return yard_line
+    
+    # Conservative: without possession side info, assume midfield-ish
+    # This avoids false Red Zone / Own Deep classifications
+    return yard_line + 50 if yard_line <= 25 else yard_line
+
 def get_field_position_band(yardline_100):
-    """Convert yardline to descriptive band"""
+    """Convert normalized yardline to descriptive band"""
     if yardline_100 < 25:
         return "Own Deep", "#ff4444"
     elif yardline_100 < 40:
@@ -207,6 +228,9 @@ def calculate_uncertainty(down, yards_to_go, yardline_100, quarter, clock_second
     """
     Core uncertainty formula - detects pre-resolution stress points
     where markets historically soften BEFORE the play outcome.
+    
+    Uses ONLY snap-to-snap variables. Returns raw score (internal only)
+    and trigger list. Raw score NEVER displayed - only state labels.
     """
     uncertainty = 0
     triggers = []
@@ -268,107 +292,75 @@ def get_uncertainty_state(uncertainty_score):
         return "NORMAL", "#44ff44", "—"
 
 def fetch_live_situation(event_id):
-    """Fetch detailed play-by-play situation from ESPN"""
+    """
+    Fetch detailed play-by-play situation from ESPN.
+    Returns ONLY snap-to-snap variables for LiveState.
+    
+    NFL uses plays endpoint, not situation object in summary.
+    """
     try:
-        url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event_id}"
-        resp = requests.get(url, timeout=8)
+        # NFL uses the plays endpoint for live data
+        plays_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/{event_id}/competitions/{event_id}/plays?limit=10"
+        resp = requests.get(plays_url, timeout=8)
         data = resp.json()
         
-        situation = data.get("situation", {})
-        if not situation:
+        items = data.get("items", [])
+        if not items:
             return None
         
-        # Extract core data
-        down = situation.get("down", 0)
-        distance = situation.get("distance", 0)
-        yardline = situation.get("yardLine", 50)
-        yard_line_100 = situation.get("yardLine", 50)
+        # Get most recent play
+        last_play = items[-1] if items else {}
         
-        # Possession info
-        poss_id = situation.get("possession", "")
+        # Extract situation from last play
+        down = last_play.get("start", {}).get("down", 0)
+        distance = last_play.get("start", {}).get("distance", 0)
+        raw_yardline = last_play.get("start", {}).get("yardLine", 50)
+        quarter = last_play.get("period", {}).get("number", 0)
+        clock_str = last_play.get("clock", {}).get("displayValue", "15:00")
         
-        # Get scores from boxscore
-        boxscore = data.get("boxscore", {})
-        teams = boxscore.get("teams", [])
-        
-        home_score = 0
-        away_score = 0
-        home_team = ""
-        away_team = ""
-        poss_team = ""
-        def_team = ""
-        
-        for team_data in teams:
-            team_info = team_data.get("team", {})
-            team_id = team_info.get("id", "")
-            team_name = TEAM_ABBREVS.get(team_info.get("displayName", ""), team_info.get("displayName", ""))
-            score = int(team_data.get("score", 0) or 0)
-            home_away = team_data.get("homeAway", "")
-            
-            if home_away == "home":
-                home_score = score
-                home_team = team_name
-            else:
-                away_score = score
-                away_team = team_name
-            
-            if team_id == poss_id:
-                poss_team = team_name
-        
-        def_team = away_team if poss_team == home_team else home_team
-        
-        # Get clock from header
-        header = data.get("header", {})
-        competitions = header.get("competitions", [{}])
-        if competitions:
-            status = competitions[0].get("status", {})
-            quarter = status.get("period", 0)
-            clock_str = status.get("displayClock", "15:00")
-            
-            # Parse clock to seconds
-            try:
-                parts = clock_str.split(":")
-                clock_seconds = int(parts[0]) * 60 + int(parts[1])
-            except:
-                clock_seconds = 900
-        else:
-            quarter = 0
+        # Parse clock to seconds
+        try:
+            parts = clock_str.split(":")
+            clock_seconds = int(parts[0]) * 60 + int(parts[1])
+        except:
             clock_seconds = 900
         
-        # Timeouts
-        home_timeouts = situation.get("homeTimeouts", 3)
-        away_timeouts = situation.get("awayTimeouts", 3)
+        # Get team info
+        poss_team_data = last_play.get("start", {}).get("team", {})
+        poss_team_name = poss_team_data.get("displayName", "")
+        poss_team = TEAM_ABBREVS.get(poss_team_name, poss_team_name)
         
-        # Determine if possession team is home
-        poss_is_home = (poss_team == home_team)
-        poss_score = home_score if poss_is_home else away_score
-        def_score = away_score if poss_is_home else home_score
-        poss_timeouts = home_timeouts if poss_is_home else away_timeouts
-        def_timeouts = away_timeouts if poss_is_home else home_timeouts
+        # Determine if it's a red zone situation
+        is_red_zone = last_play.get("start", {}).get("yardsToEndzone", 100) <= 20
+        yardline_100 = 100 - last_play.get("start", {}).get("yardsToEndzone", 50)
         
-        # Last play for turnover detection
-        last_play = situation.get("lastPlay", {})
+        # Check for turnover
         play_type = last_play.get("type", {}).get("text", "")
         had_turnover = "intercept" in play_type.lower() or "fumble" in play_type.lower()
         
+        # Now get scores from scoreboard (we already have this data)
+        # We'll need to pass it in or fetch separately
+        # For now, return what we have
+        
         return {
             "possession_team": poss_team,
-            "defense_team": def_team,
+            "defense_team": "",  # Will determine from game data
             "quarter": quarter,
             "clock_seconds": clock_seconds,
             "clock_display": clock_str,
             "down": down,
             "yards_to_go": distance,
-            "yardline_100": yard_line_100,
-            "score_offense": poss_score,
-            "score_defense": def_score,
-            "timeouts_offense": poss_timeouts,
-            "timeouts_defense": def_timeouts,
+            "yardline_100": yardline_100,
+            "score_offense": 0,  # Will get from game data
+            "score_defense": 0,
+            "timeouts_offense": 3,
+            "timeouts_defense": 3,
             "had_turnover": had_turnover,
-            "home_team": home_team,
-            "away_team": away_team,
-            "home_score": home_score,
-            "away_score": away_score
+            "home_team": "",
+            "away_team": "",
+            "home_score": 0,
+            "away_score": 0,
+            "play_text": last_play.get("text", "")
         }
     except Exception as e:
         return None
@@ -683,10 +675,28 @@ if live_games:
         if not event_id:
             continue
         
-        # Fetch live situation
+        # Fetch live situation from plays endpoint
         sit = fetch_live_situation(event_id)
         
+        # Merge with game data for scores
         if sit and sit.get("down", 0) > 0:
+            # Fill in scores from game data
+            sit["home_team"] = g["home_team"]
+            sit["away_team"] = g["away_team"]
+            sit["home_score"] = g["home_score"]
+            sit["away_score"] = g["away_score"]
+            
+            # Determine defense team and scores
+            poss_team = sit["possession_team"]
+            if poss_team == g["home_team"]:
+                sit["defense_team"] = g["away_team"]
+                sit["score_offense"] = g["home_score"]
+                sit["score_defense"] = g["away_score"]
+            else:
+                sit["defense_team"] = g["home_team"]
+                sit["score_offense"] = g["away_score"]
+                sit["score_defense"] = g["home_score"]
+            
             # Get previous state for score compression detection
             prev_state = st.session_state.livestate_prev.get(game_key, {})
             prev_score_pressure = prev_state.get("score_pressure")
@@ -750,13 +760,17 @@ if live_games:
                 trigger_html = " • ".join([f"<span style='color:#ffaa44'>{t}</span>" for t in triggers])
                 st.markdown(f"<div style='padding:8px 12px;background:#1a1a1a;border-radius:6px;margin-bottom:10px'>🎯 <b>Triggers:</b> {trigger_html}</div>", unsafe_allow_html=True)
             
+            # Show last play text if available
+            if sit.get("play_text"):
+                st.caption(f"📝 {sit['play_text'][:100]}...")
+            
             # Kalshi link
             parts = game_key.split("@")
             kalshi_url = build_kalshi_ml_url(parts[0], parts[1], g.get('game_date'))
             st.link_button(f"🔗 Trade {game_key.replace('@', ' @ ')}", kalshi_url, use_container_width=True)
             
         else:
-            # No situation data - show basic score
+            # No situation data - show basic score + debug info
             st.markdown(f"""
             <div style="background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #333;margin-bottom:10px">
                 <b style="color:#fff">{g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']}</b>
@@ -764,6 +778,32 @@ if live_games:
                 <span style="color:#666;float:right">Awaiting play data...</span>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Debug: Show what ESPN is returning
+            if st.checkbox(f"🔍 Debug {game_key}", key=f"debug_{game_key}"):
+                try:
+                    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event_id}"
+                    resp = requests.get(url, timeout=8)
+                    data = resp.json()
+                    
+                    st.code(f"Event ID: {event_id}")
+                    st.code(f"Has 'situation': {'situation' in data}")
+                    
+                    if "situation" in data:
+                        st.json(data["situation"])
+                    else:
+                        st.write("Available keys:", list(data.keys()))
+                        
+                        # Check for drives/plays
+                        if "drives" in data:
+                            drives = data.get("drives", {})
+                            current = drives.get("current", {})
+                            st.write("Current drive:", current)
+                            plays = current.get("plays", [])
+                            if plays:
+                                st.write("Last play:", plays[-1])
+                except Exception as e:
+                    st.error(f"Debug error: {e}")
     
     st.divider()
 
