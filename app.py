@@ -351,6 +351,25 @@ def get_rest_days(team, game_date, last_games):
     return max(0, delta)
 
 def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team, yards_to_endzone=None, poss_text=None):
+    """
+    Render football field with ball position.
+    
+    Field layout:
+    - Left (0-10%): Away team's END ZONE (where HOME attacks)
+    - Right (90-100%): Home team's END ZONE (where AWAY attacks)
+    
+    Ball position logic:
+    - ball_yard 0 = ball at away's goal line (left side, 10%)
+    - ball_yard 100 = ball at home's goal line (right side, 90%)
+    
+    HOME team has possession: ball_yard = yards_to_endzone
+    - 80 yards to go (own 20) → ball_yard=80 → 74% (RIGHT side, near home end zone)
+    - 20 yards to go (red zone) → ball_yard=20 → 26% (LEFT side, near away end zone)
+    
+    AWAY team has possession: ball_yard = 100 - yards_to_endzone  
+    - 80 yards to go (own 20) → ball_yard=20 → 26% (LEFT side, near away end zone)
+    - 20 yards to go (red zone) → ball_yard=80 → 74% (RIGHT side, near home end zone)
+    """
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
     
@@ -364,9 +383,13 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
     ball_loc = poss_text if poss_text else ""
     
+    # Direction indicator
+    is_home_poss = possession_team == home_team
+    direction = "◀" if is_home_poss else "▶"  # Home attacks left, away attacks right
+    
     return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-            <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball</span>
+            <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball {direction}</span>
             <span style="color:#aaa">{ball_loc}</span>
             <span style="color:#fff;font-weight:bold">{situation}</span></div>
         <div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
@@ -383,7 +406,7 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
             <div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
             <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div></div>
         <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
-            <span>← {away_code}</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} →</span></div></div>"""
+            <span>← {away_code} EZ</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} EZ →</span></div></div>"""
 
 def fetch_espn_scores():
     url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
@@ -432,8 +455,21 @@ def fetch_espn_scores():
                 possession_team = None
                 is_home_possession = None
             
+            # BALL POSITION CALCULATION
+            # Home attacks LEFT (toward away's end zone at 0-10%)
+            # Away attacks RIGHT (toward home's end zone at 90-100%)
+            # yards_to_endzone = distance to score
             if yards_to_endzone is not None and is_home_possession is not None:
-                ball_yard = yards_to_endzone if is_home_possession else 100 - yards_to_endzone
+                if is_home_possession:
+                    # Home has ball, attacks LEFT
+                    # 80 yards to go (own 20) → ball should be RIGHT side → ball_yard = 80
+                    # 20 yards to go (red zone) → ball should be LEFT side → ball_yard = 20
+                    ball_yard = yards_to_endzone
+                else:
+                    # Away has ball, attacks RIGHT
+                    # 80 yards to go (own 20) → ball should be LEFT side → ball_yard = 20
+                    # 20 yards to go (red zone) → ball should be RIGHT side → ball_yard = 80
+                    ball_yard = 100 - yards_to_endzone
             else:
                 ball_yard = 50
             
@@ -452,7 +488,9 @@ def fetch_espn_scores():
                 "period": period, "clock": clock, "status_type": status_type,
                 "game_date": game_date, "down": down, "distance": distance,
                 "yards_to_endzone": yards_to_endzone, "ball_yard": ball_yard,
-                "possession_team": possession_team, "is_red_zone": is_red_zone, "poss_text": poss_text
+                "possession_team": possession_team, "is_red_zone": is_red_zone, "poss_text": poss_text,
+                "is_home_possession": is_home_possession,  # Added for debugging
+                "raw_possession_id": possession_id  # Added for debugging
             }
         return games
     except Exception as e:
@@ -751,11 +789,11 @@ with st.sidebar:
 | **-10%−** | Bad |
 """)
     st.divider()
-    st.caption("v1.9.0 NFL EDGE")
+    st.caption("v2.0.0 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.0.0")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -765,7 +803,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.9.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.0")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -813,6 +851,27 @@ if live_games or final_games:
         parts = game_key.split("@")
         st.markdown(render_football_field(g.get('ball_yard', 50), g.get('down'), g.get('distance'), g.get('possession_team'), parts[0], parts[1], g.get('yards_to_endzone'), g.get('poss_text')), unsafe_allow_html=True)
         
+        # DEBUG: Show raw position data
+        with st.expander("🔍 DEBUG: Ball Position Data", expanded=False):
+            poss_team = g.get('possession_team', 'None')
+            is_home_poss = g.get('is_home_possession')
+            poss_str = "HOME" if is_home_poss == True else "AWAY" if is_home_poss == False else "NONE"
+            st.markdown(f"""
+            **Raw ESPN Data:**
+            - `yards_to_endzone`: **{g.get('yards_to_endzone')}**
+            - `possession_team`: **{poss_team}** ({poss_str})
+            - `poss_text`: **{g.get('poss_text')}**
+            - `down`: **{g.get('down')}** | `distance`: **{g.get('distance')}**
+            
+            **Calculated:**
+            - `ball_yard`: **{g.get('ball_yard')}** (0=left, 100=right)
+            - `ball_pct`: **{10 + (g.get('ball_yard', 50) / 100) * 80:.1f}%**
+            
+            **Direction Logic:**
+            - {parts[0]} (AWAY) attacks → RIGHT (toward {parts[1]} end zone)
+            - {parts[1]} (HOME) attacks ← LEFT (toward {parts[0]} end zone)
+            """)
+        
         with st.expander("📋 Last 5 Plays", expanded=True):
             plays = fetch_play_by_play(g.get('event_id'))
             for p in plays:
@@ -831,7 +890,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.0")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1159,4 +1218,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.9.0")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.0")
