@@ -662,6 +662,9 @@ st.caption("Pre-game picks + LiveState in-game stress detection")
 live_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_IN_PROGRESS"}
 final_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_FINAL"}
 
+# Debug: Show what games we have
+st.sidebar.caption(f"Live: {len(live_games)} | Final: {len(final_games)}")
+
 # Show LiveState section if there are any live OR recently final games
 if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
@@ -678,7 +681,9 @@ if live_games or final_games:
     
     # ===== FINAL GAMES: Show resolved state =====
     for game_key, g in final_games.items():
-        away_team, home_team = game_key.split("@")
+        parts = game_key.split("@")
+        away_team = parts[0]
+        home_team = parts[1]
         winner = home_team if g['home_score'] > g['away_score'] else away_team
         winner_code = KALSHI_CODES.get(winner, winner[:3].upper())
         
