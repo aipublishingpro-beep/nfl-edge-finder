@@ -455,23 +455,53 @@ def fetch_espn_scores():
                 possession_team = None
                 is_home_possession = None
             
-            # BALL POSITION CALCULATION
-            # Home attacks LEFT (toward away's end zone at 0-10%)
-            # Away attacks RIGHT (toward home's end zone at 90-100%)
-            # yards_to_endzone = distance to score
-            if yards_to_endzone is not None and is_home_possession is not None:
+            # BALL POSITION CALCULATION - Parse poss_text directly for accuracy
+            # Field: LEFT = Away end zone (0-10%), RIGHT = Home end zone (90-100%)
+            # poss_text format: "NE 23" or "HOU 45" = team's side + yard line
+            ball_yard = 50  # default
+            
+            if poss_text and home_team and away_team:
+                # Parse poss_text like "NE 23" or "HOU 45"
+                parts_poss = poss_text.strip().split()
+                if len(parts_poss) >= 2:
+                    try:
+                        side_team = parts_poss[0]  # "NE" or "HOU"
+                        yard_line = int(parts_poss[-1])  # 23, 45, etc.
+                        
+                        # Get team codes
+                        home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
+                        away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
+                        
+                        # Determine absolute field position (0-100)
+                        # 0 = Away's goal line (left), 100 = Home's goal line (right)
+                        if side_team.upper() == away_code.upper():
+                            # Ball is on AWAY's side of field (left half)
+                            # "HOU 20" = 20 yards from HOU's goal line = position 20
+                            ball_yard = yard_line
+                        elif side_team.upper() == home_code.upper():
+                            # Ball is on HOME's side of field (right half)
+                            # "NE 20" = 20 yards from NE's goal line = position 80
+                            ball_yard = 100 - yard_line
+                        else:
+                            # Fallback to yards_to_endzone method
+                            if yards_to_endzone is not None and is_home_possession is not None:
+                                if is_home_possession:
+                                    ball_yard = yards_to_endzone
+                                else:
+                                    ball_yard = 100 - yards_to_endzone
+                    except (ValueError, IndexError):
+                        # Fallback
+                        if yards_to_endzone is not None and is_home_possession is not None:
+                            if is_home_possession:
+                                ball_yard = yards_to_endzone
+                            else:
+                                ball_yard = 100 - yards_to_endzone
+            elif yards_to_endzone is not None and is_home_possession is not None:
+                # Fallback to original method if no poss_text
                 if is_home_possession:
-                    # Home has ball, attacks LEFT
-                    # 80 yards to go (own 20) → ball should be RIGHT side → ball_yard = 80
-                    # 20 yards to go (red zone) → ball should be LEFT side → ball_yard = 20
                     ball_yard = yards_to_endzone
                 else:
-                    # Away has ball, attacks RIGHT
-                    # 80 yards to go (own 20) → ball should be LEFT side → ball_yard = 20
-                    # 20 yards to go (red zone) → ball should be RIGHT side → ball_yard = 80
                     ball_yard = 100 - yards_to_endzone
-            else:
-                ball_yard = 50
             
             game_date_str = event.get("date", "")
             try:
@@ -789,11 +819,11 @@ with st.sidebar:
 | **-10%−** | Bad |
 """)
     st.divider()
-    st.caption("v2.0.0 NFL EDGE")
+    st.caption("v2.0.1 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.0.0")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.0.1")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -803,7 +833,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -856,20 +886,27 @@ if live_games or final_games:
             poss_team = g.get('possession_team', 'None')
             is_home_poss = g.get('is_home_possession')
             poss_str = "HOME" if is_home_poss == True else "AWAY" if is_home_poss == False else "NONE"
+            
+            # Show parsing logic
+            poss_text = g.get('poss_text', '')
+            home_code = KALSHI_CODES.get(parts[1], parts[1][:3].upper())
+            away_code = KALSHI_CODES.get(parts[0], parts[0][:3].upper())
+            
             st.markdown(f"""
             **Raw ESPN Data:**
-            - `yards_to_endzone`: **{g.get('yards_to_endzone')}**
+            - `poss_text`: **{poss_text}** ← PRIMARY SOURCE
+            - `yards_to_endzone`: **{g.get('yards_to_endzone')}** (fallback)
             - `possession_team`: **{poss_team}** ({poss_str})
-            - `poss_text`: **{g.get('poss_text')}**
-            - `down`: **{g.get('down')}** | `distance`: **{g.get('distance')}**
+            
+            **Parsing Logic:**
+            - Away code: **{away_code}** (LEFT side, 0-50)
+            - Home code: **{home_code}** (RIGHT side, 50-100)
+            - If "{away_code} 20" → ball_yard = 20 (left side)
+            - If "{home_code} 20" → ball_yard = 80 (right side)
             
             **Calculated:**
-            - `ball_yard`: **{g.get('ball_yard')}** (0=left, 100=right)
-            - `ball_pct`: **{10 + (g.get('ball_yard', 50) / 100) * 80:.1f}%**
-            
-            **Direction Logic:**
-            - {parts[0]} (AWAY) attacks → RIGHT (toward {parts[1]} end zone)
-            - {parts[1]} (HOME) attacks ← LEFT (toward {parts[0]} end zone)
+            - `ball_yard`: **{g.get('ball_yard')}** (0=left goal, 100=right goal)
+            - `ball_pct`: **{10 + (g.get('ball_yard', 50) / 100) * 80:.1f}%** on field
             """)
         
         with st.expander("📋 Last 5 Plays", expanded=True):
@@ -890,7 +927,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1218,4 +1255,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.0")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.1")
