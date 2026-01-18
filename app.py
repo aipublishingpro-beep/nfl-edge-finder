@@ -297,10 +297,11 @@ def fetch_live_situation(event_id):
     Returns ONLY snap-to-snap variables for LiveState.
     
     NFL uses plays endpoint, not situation object in summary.
+    We need the END of the last play = current pre-snap situation.
     """
     try:
-        # NFL uses the plays endpoint for live data
-        plays_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/{event_id}/competitions/{event_id}/plays?limit=10"
+        # NFL uses the plays endpoint for live data - get most recent plays
+        plays_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/{event_id}/competitions/{event_id}/plays?limit=20"
         resp = requests.get(plays_url, timeout=8)
         data = resp.json()
         
@@ -308,13 +309,24 @@ def fetch_live_situation(event_id):
         if not items:
             return None
         
-        # Get most recent play
+        # Get most recent play - use END state for current situation
         last_play = items[-1] if items else {}
         
-        # Extract situation from last play
-        down = last_play.get("start", {}).get("down", 0)
-        distance = last_play.get("start", {}).get("distance", 0)
-        raw_yardline = last_play.get("start", {}).get("yardLine", 50)
+        # Use END of last play = current pre-snap situation
+        end_state = last_play.get("end", {})
+        start_state = last_play.get("start", {})
+        
+        # Current situation is END of last play
+        down = end_state.get("down", 0)
+        distance = end_state.get("distance", 0)
+        yards_to_endzone = end_state.get("yardsToEndzone", 50)
+        
+        # If end state has no down (turnover, score, etc), use start of last play
+        if down == 0:
+            down = start_state.get("down", 0)
+            distance = start_state.get("distance", 0)
+            yards_to_endzone = start_state.get("yardsToEndzone", 50)
+        
         quarter = last_play.get("period", {}).get("number", 0)
         clock_str = last_play.get("clock", {}).get("displayValue", "15:00")
         
@@ -325,33 +337,28 @@ def fetch_live_situation(event_id):
         except:
             clock_seconds = 900
         
-        # Get team info
-        poss_team_data = last_play.get("start", {}).get("team", {})
+        # Get team info from end state (current possession)
+        poss_team_data = end_state.get("team", {}) or start_state.get("team", {})
         poss_team_name = poss_team_data.get("displayName", "")
         poss_team = TEAM_ABBREVS.get(poss_team_name, poss_team_name)
         
-        # Determine if it's a red zone situation
-        is_red_zone = last_play.get("start", {}).get("yardsToEndzone", 100) <= 20
-        yardline_100 = 100 - last_play.get("start", {}).get("yardsToEndzone", 50)
+        # Field position: yardsToEndzone is distance to OPPONENT end zone
+        yardline_100 = 100 - yards_to_endzone
         
         # Check for turnover
         play_type = last_play.get("type", {}).get("text", "")
         had_turnover = "intercept" in play_type.lower() or "fumble" in play_type.lower()
         
-        # Now get scores from scoreboard (we already have this data)
-        # We'll need to pass it in or fetch separately
-        # For now, return what we have
-        
         return {
             "possession_team": poss_team,
-            "defense_team": "",  # Will determine from game data
+            "defense_team": "",
             "quarter": quarter,
             "clock_seconds": clock_seconds,
             "clock_display": clock_str,
             "down": down,
             "yards_to_go": distance,
             "yardline_100": yardline_100,
-            "score_offense": 0,  # Will get from game data
+            "score_offense": 0,
             "score_defense": 0,
             "timeouts_offense": 3,
             "timeouts_defense": 3,
@@ -764,10 +771,11 @@ if live_games:
             st.markdown(f"""
             <div class="{css_class}" style="background:linear-gradient(135deg,#1a1a2e,#0a0a1e);padding:18px;border-radius:12px;border:2px solid {state_color};margin-bottom:15px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <div>
+                    <div style="flex:1"></div>
+                    <div style="text-align:center;flex:2">
                         <b style="color:#fff;font-size:1.3em">{g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']}</b>
                     </div>
-                    <div style="text-align:right">
+                    <div style="text-align:right;flex:1">
                         <b style="color:{state_color};font-size:1.4em">{state_label}</b>
                         <div style="color:#888;font-size:0.85em">Price Move: {expected_leak}</div>
                     </div>
