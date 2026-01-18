@@ -1035,8 +1035,6 @@ ml_results.sort(key=lambda x: x["score"], reverse=True)
 
 if ml_results:
     for r in ml_results:
-        if r["score"] < 5.5:
-            continue
         
         pick_team = r["pick"]
         pick_code = KALSHI_CODES.get(pick_team, pick_team[:3].upper())
