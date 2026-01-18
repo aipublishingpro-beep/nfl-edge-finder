@@ -373,19 +373,22 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
     
-    if not possession_team or not poss_text:
-        return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0;text-align:center">
-            <span style="color:#ffaa00;font-size:1.1em">🏈 Between Plays / Scoring</span></div>"""
+    # Always show field - use defaults if no possession data
+    no_possession = not possession_team or not poss_text
+    if no_possession:
+        situation = "Between Plays"
+        poss_code = "—"
+        ball_loc = ""
+        direction = ""
+    else:
+        situation = f"{down} & {distance}" if down and distance else "—"
+        poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
+        ball_loc = poss_text if poss_text else ""
+        is_home_poss = possession_team == home_team
+        direction = "◀" if is_home_poss else "▶"
     
     ball_yard = max(0, min(100, ball_yard))
     ball_pct = 10 + (ball_yard / 100) * 80
-    situation = f"{down} & {distance}" if down and distance else "—"
-    poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
-    ball_loc = poss_text if poss_text else ""
-    
-    # Direction indicator
-    is_home_poss = possession_team == home_team
-    direction = "◀" if is_home_poss else "▶"  # Home attacks left, away attacks right
     
     return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
@@ -819,11 +822,11 @@ with st.sidebar:
 | **-10%−** | Bad |
 """)
     st.divider()
-    st.caption("v2.0.1 NFL EDGE")
+    st.caption("v2.0.2 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.0.1")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.0.2")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -833,7 +836,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -927,7 +930,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1255,4 +1258,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.1")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.2")
