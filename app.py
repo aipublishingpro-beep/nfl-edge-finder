@@ -164,7 +164,8 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     
     # Clamp ball position
     ball_yard = max(0, min(100, ball_yard))
-    ball_pct = ball_yard  # 0 = away endzone, 100 = home endzone
+    # Scale ball_yard (0-100) to visual field (10%-90%) since endzones are 0-10% and 90-100%
+    ball_pct = 10 + (ball_yard / 100) * 80  # 0->10%, 50->50%, 100->90%
     
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
@@ -202,13 +203,17 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
             <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
-            <span>← {away_code} END</span>
-            <span>|20</span>
-            <span>|40</span>
+            <span>← {away_code}</span>
+            <span>10</span>
+            <span>20</span>
+            <span>30</span>
+            <span>40</span>
             <span>50</span>
-            <span>40|</span>
-            <span>20|</span>
-            <span>{home_code} END →</span>
+            <span>40</span>
+            <span>30</span>
+            <span>20</span>
+            <span>10</span>
+            <span>{home_code} →</span>
         </div>
     </div>
     """
@@ -261,18 +266,13 @@ def fetch_espn_scores():
                 possession_team = None
             
             # Calculate ball position (0-100 scale, away endzone to home endzone)
-            # yardLine from ESPN is the yard line number (e.g., 25 means the 25 yard line)
-            # We need to convert to 0-100 based on which side
+            # yardLine from ESPN is yards from the goal line they're attacking
             if possession_team == home_team:
-                # Home team has ball, yardLine is distance from HOME endzone they're attacking
-                # So if they're on their own 25, that's 75 yards from scoring (ball at 25% of field)
-                # If on opponent's 25, that's 25 yards from scoring (ball at 75%)
-                ball_yard = 100 - yard_line
-            elif possession_team == away_team:
-                # Away team has ball, moving toward away endzone (left side = 0)
-                # If on their own 25, they're 75 yards from scoring (ball at 75%)
-                # If on opponent's 25, they're 25 yards from scoring (ball at 25%)
+                # Home team attacks away endzone (left side), so lower yard = closer to left
                 ball_yard = yard_line
+            elif possession_team == away_team:
+                # Away team attacks home endzone (right side), so lower yard = closer to right
+                ball_yard = 100 - yard_line
             else:
                 ball_yard = 50  # Default to midfield
             
