@@ -328,6 +328,65 @@ def fetch_espn_scores():
         st.error(f"ESPN fetch error: {e}")
         return {}
 
+def fetch_play_by_play(event_id):
+    """Fetch recent plays for a specific game"""
+    url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event_id}"
+    try:
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        plays = []
+        
+        # Get drives and plays
+        all_plays = data.get("plays", [])
+        
+        # Get last 5 plays, most recent first
+        recent_plays = all_plays[-5:] if len(all_plays) >= 5 else all_plays
+        recent_plays = list(reversed(recent_plays))
+        
+        for play in recent_plays:
+            play_text = play.get("text", "")
+            play_type = play.get("type", {}).get("text", "")
+            is_scoring = play.get("scoringPlay", False)
+            period = play.get("period", {}).get("number", 0) if isinstance(play.get("period"), dict) else play.get("period", 0)
+            clock = play.get("clock", {}).get("displayValue", "") if isinstance(play.get("clock"), dict) else ""
+            
+            # Detect play type for icons
+            short_text = play.get("shortText", "")
+            if is_scoring:
+                icon = "🏈"
+            elif "intercept" in play_text.lower():
+                icon = "🔴"
+            elif "fumble" in play_text.lower():
+                icon = "🔴"
+            elif "touchdown" in play_text.lower() or "TD" in short_text:
+                icon = "🏈"
+            elif "field goal" in play_text.lower():
+                icon = "🥅"
+            elif "punt" in play_text.lower():
+                icon = "📤"
+            elif "kickoff" in play_text.lower():
+                icon = "📤"
+            elif "sack" in play_text.lower():
+                icon = "💥"
+            elif "incomplete" in play_text.lower():
+                icon = "❌"
+            else:
+                icon = "▶️"
+            
+            plays.append({
+                "text": play_text[:100] + "..." if len(play_text) > 100 else play_text,
+                "short": short_text,
+                "type": play_type,
+                "scoring": is_scoring,
+                "period": period,
+                "clock": clock,
+                "icon": icon
+            })
+        
+        return plays
+    except Exception as e:
+        return []
+
 def fetch_espn_injuries():
     injuries = {}
     try:
@@ -463,7 +522,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.7.1 NFL EDGE")
+    st.caption("v1.7.2 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -478,7 +537,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -577,6 +636,20 @@ if live_games or final_games:
         )
         st.markdown(field_html, unsafe_allow_html=True)
         
+        # Play-by-play
+        with st.expander("📋 Recent Plays", expanded=False):
+            plays = fetch_play_by_play(g.get('event_id'))
+            if plays:
+                for p in plays:
+                    scoring_style = "background:#1a3d1a;border-left:3px solid #00ff00;" if p['scoring'] else ""
+                    st.markdown(f"""<div style="padding:8px;margin:4px 0;background:#111;border-radius:6px;{scoring_style}">
+                        <span style="color:#888;font-size:0.8em">Q{p['period']} {p['clock']}</span>
+                        <span style="margin-left:8px">{p['icon']}</span>
+                        <span style="color:#fff;margin-left:8px">{p['text']}</span>
+                    </div>""", unsafe_allow_html=True)
+            else:
+                st.caption("No plays available")
+        
         kalshi_url = build_kalshi_ml_url(parts[0], parts[1], g.get('game_date'))
         st.link_button(f"🔗 Trade {game_key.replace('@', ' @ ')}", kalshi_url, use_container_width=True)
     
@@ -587,7 +660,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -789,4 +862,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.1")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.2")
