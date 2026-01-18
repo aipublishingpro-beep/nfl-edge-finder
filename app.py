@@ -407,8 +407,24 @@ def fetch_play_by_play(event_id):
                 icon = "❌"
             elif "pass" in text_lower:
                 icon = "🎯"
-            elif "rush" in text_lower or "run" in text_lower:
+            elif "rush" in text_lower or "run " in text_lower:
                 icon = "🏃"
+            elif "up the middle" in text_lower or "left tackle" in text_lower or "right tackle" in text_lower:
+                icon = "🏃"
+            elif "left guard" in text_lower or "right guard" in text_lower:
+                icon = "🏃"
+            elif "left end" in text_lower or "right end" in text_lower:
+                icon = "🏃"
+            elif "scramble" in text_lower:
+                icon = "🏃"
+            elif "kneel" in text_lower or "kneels" in text_lower:
+                icon = "🧎"
+            elif "spike" in text_lower:
+                icon = "⏱️"
+            elif "timeout" in text_lower:
+                icon = "⏸️"
+            elif "penalty" in text_lower:
+                icon = "🚩"
             else:
                 icon = "▶️"
             
@@ -562,7 +578,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.7.3 NFL EDGE")
+    st.caption("v1.7.4 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -577,7 +593,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.3")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.4")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -700,7 +716,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.3")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.4")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -902,4 +918,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.3")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.4")
