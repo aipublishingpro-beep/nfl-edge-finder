@@ -7,15 +7,34 @@ import os
 import time
 import uuid
 
+# Use streamlit-autorefresh for smoother updates (replaces meta refresh)
+try:
+    from streamlit_autorefresh import st_autorefresh
+    HAS_AUTOREFRESH = True
+except ImportError:
+    HAS_AUTOREFRESH = False
+
 st.set_page_config(page_title="NFL Edge Finder", page_icon="🏈", layout="wide")
 
 if "sid" not in st.session_state:
     st.session_state["sid"] = str(uuid.uuid4())
 
+# Session state for ball position tracking
+if "last_ball_positions" not in st.session_state:
+    st.session_state.last_ball_positions = {}  # {game_key: {"ball_yard": 50, "poss_team": "...", "poss_text": "..."}}
+
 eastern = pytz.timezone("US/Eastern")
 today_str = datetime.now(eastern).strftime("%Y-%m-%d")
 
 st.markdown("""
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NQKY5VQ376"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-NQKY5VQ376');
+</script>
 <style>
 .stLinkButton > a {background-color: #00aa00 !important;border-color: #00aa00 !important;color: white !important;}
 .stLinkButton > a:hover {background-color: #00cc00 !important;border-color: #00cc00 !important;}
@@ -49,9 +68,14 @@ if "selected_ml_pick" not in st.session_state:
 if "editing_position" not in st.session_state:
     st.session_state.editing_position = None
 
-if st.session_state.auto_refresh:
-    st.markdown(f'<meta http-equiv="refresh" content="15;url=?r={int(time.time()) + 15}">', unsafe_allow_html=True)
-    auto_status = "🔄 Auto-refresh ON (15s)"
+# Auto-refresh using streamlit-autorefresh (smoother than meta refresh)
+if st.session_state.auto_refresh and HAS_AUTOREFRESH:
+    st_autorefresh(interval=5000, limit=None, key="nfl_autorefresh")  # 5 second refresh
+    auto_status = "🔄 Auto-refresh ON (5s)"
+elif st.session_state.auto_refresh and not HAS_AUTOREFRESH:
+    # Fallback to meta refresh if component not installed
+    st.markdown(f'<meta http-equiv="refresh" content="5;url=?r={int(time.time()) + 5}">', unsafe_allow_html=True)
+    auto_status = "🔄 Auto-refresh ON (5s)"
 else:
     auto_status = "⏸️ Auto-refresh OFF"
 
@@ -350,7 +374,134 @@ def get_rest_days(team, game_date, last_games):
     delta = (game_date - last_game).days
     return max(0, delta)
 
-def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team, yards_to_endzone=None, poss_text=None):
+
+def detect_scoring_play(last_play):
+    """
+    Detect if the last play was a scoring play.
+    Returns: (is_scoring, play_type, scoring_team_code)
+    """
+    if not last_play:
+        return False, None, None
+    
+    play_text = last_play.get("text", "") or last_play.get("description", "") or ""
+    is_scoring = last_play.get("scoringPlay", False)
+    play_type_info = last_play.get("type", {})
+    play_type_text = play_type_info.get("text", "") if isinstance(play_type_info, dict) else ""
+    
+    text_lower = play_text.lower()
+    
+    # Detect scoring types
+    if is_scoring or "touchdown" in text_lower or play_type_text == "Touchdown":
+        return True, "touchdown", None
+    elif "field goal" in text_lower and ("good" in text_lower or "made" in text_lower):
+        return True, "field_goal", None
+    elif "extra point" in text_lower and "good" in text_lower:
+        return True, "extra_point", None
+    elif "safety" in text_lower:
+        return True, "safety", None
+    elif "two-point" in text_lower and ("good" in text_lower or "success" in text_lower):
+        return True, "two_point", None
+    
+    return False, None, None
+
+
+def get_ball_position_with_fallback(game_key, g, away_team, home_team):
+    """
+    Calculate ball position with smart fallbacks for empty poss_text situations.
+    
+    Returns: (ball_yard, display_mode, poss_team, poss_text)
+    display_mode: "normal", "scoring", "between_plays", "kickoff"
+    """
+    poss_text = g.get('poss_text', '')
+    yards_to_endzone = g.get('yards_to_endzone', 50)
+    possession_team = g.get('possession_team')
+    is_home_possession = g.get('is_home_possession')
+    last_play = g.get('last_play', {})
+    period = g.get('period', 0)
+    clock = g.get('clock', '')
+    
+    home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
+    away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
+    
+    # Get last known position from session state
+    last_known = st.session_state.last_ball_positions.get(game_key, {})
+    
+    # CASE 1: We have valid poss_text - parse it directly
+    if poss_text and poss_text.strip():
+        parts_poss = poss_text.strip().split()
+        if len(parts_poss) >= 2:
+            try:
+                side_team = parts_poss[0].upper()
+                yard_line = int(parts_poss[-1])
+                
+                # Calculate ball_yard based on which side of field
+                if side_team == away_code.upper():
+                    ball_yard = yard_line  # Away's side (left half, 0-50)
+                elif side_team == home_code.upper():
+                    ball_yard = 100 - yard_line  # Home's side (right half, 50-100)
+                else:
+                    # Unknown team code, use yards_to_endzone fallback
+                    if is_home_possession is not None and yards_to_endzone is not None:
+                        ball_yard = yards_to_endzone if is_home_possession else 100 - yards_to_endzone
+                    else:
+                        ball_yard = last_known.get('ball_yard', 50)
+                
+                # Update session state with valid position
+                st.session_state.last_ball_positions[game_key] = {
+                    'ball_yard': ball_yard,
+                    'poss_team': possession_team,
+                    'poss_text': poss_text
+                }
+                
+                return ball_yard, "normal", possession_team, poss_text
+                
+            except (ValueError, IndexError):
+                pass
+    
+    # CASE 2: Empty poss_text - check if scoring play just happened
+    is_scoring, score_type, _ = detect_scoring_play(last_play)
+    
+    if is_scoring:
+        # Determine which endzone to show ball at
+        # If we know who scored, show at their target endzone
+        if last_known.get('poss_team'):
+            scoring_team = last_known.get('poss_team')
+            if scoring_team == home_team:
+                ball_yard = 0  # Home scored - ball at away's endzone (left)
+            else:
+                ball_yard = 100  # Away scored - ball at home's endzone (right)
+        else:
+            # Use last known ball position direction
+            last_yard = last_known.get('ball_yard', 50)
+            ball_yard = 0 if last_yard < 50 else 100
+        
+        score_emoji = "🏈" if score_type == "touchdown" else "🥅" if score_type == "field_goal" else "⚡"
+        return ball_yard, "scoring", None, f"{score_emoji} {score_type.upper().replace('_', ' ')}"
+    
+    # CASE 3: Check for kickoff/punt (ball in transition)
+    if last_play:
+        play_text = (last_play.get("text", "") or "").lower()
+        if "kickoff" in play_text or "kicks off" in play_text:
+            return 65, "kickoff", None, "⚡ KICKOFF"
+        elif "punts" in play_text:
+            return 50, "between_plays", None, "📤 PUNT"
+    
+    # CASE 4: Game in progress but no possession data - use last known or hide
+    if period > 0:
+        # Check if it's end of quarter
+        if clock == "0:00":
+            return last_known.get('ball_yard', 50), "between_plays", None, "⏱️ End of Quarter"
+        
+        # Use last known position as fallback
+        if last_known.get('ball_yard') is not None:
+            return last_known.get('ball_yard'), "between_plays", last_known.get('poss_team'), "Between Plays"
+    
+    # CASE 5: Game not started or no data - show at 50
+    return 50, "between_plays", None, ""
+
+
+def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team, 
+                          yards_to_endzone=None, poss_text=None, display_mode="normal"):
     """
     Render football field with ball position.
     
@@ -358,39 +509,51 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     - Left (0-10%): Away team's END ZONE (where HOME attacks)
     - Right (90-100%): Home team's END ZONE (where AWAY attacks)
     
-    Ball position logic:
-    - ball_yard 0 = ball at away's goal line (left side, 10%)
-    - ball_yard 100 = ball at home's goal line (right side, 90%)
-    
-    HOME team has possession: ball_yard = yards_to_endzone
-    - 80 yards to go (own 20) → ball_yard=80 → 74% (RIGHT side, near home end zone)
-    - 20 yards to go (red zone) → ball_yard=20 → 26% (LEFT side, near away end zone)
-    
-    AWAY team has possession: ball_yard = 100 - yards_to_endzone  
-    - 80 yards to go (own 20) → ball_yard=20 → 26% (LEFT side, near away end zone)
-    - 20 yards to go (red zone) → ball_yard=80 → 74% (RIGHT side, near home end zone)
+    display_mode: "normal", "scoring", "between_plays", "kickoff"
     """
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
     
-    # Always show field - use defaults if no possession data
-    no_possession = not possession_team or not poss_text
-    if no_possession:
-        situation = "Between Plays"
+    # Build situation text based on display mode
+    if display_mode == "scoring":
+        situation = poss_text or "🏈 SCORE!"
         poss_code = "—"
         ball_loc = ""
         direction = ""
+        ball_style = "font-size:28px;animation:pulse 0.5s infinite;text-shadow:0 0 20px #ffff00"
+    elif display_mode == "kickoff":
+        situation = poss_text or "⚡ KICKOFF"
+        poss_code = "—"
+        ball_loc = ""
+        direction = ""
+        ball_style = "font-size:24px;text-shadow:0 0 10px #fff"
+    elif display_mode == "between_plays" or not possession_team:
+        situation = poss_text if poss_text else "Between Plays"
+        poss_code = "—"
+        ball_loc = ""
+        direction = ""
+        ball_style = "font-size:24px;opacity:0.6;text-shadow:0 0 10px #fff"
     else:
         situation = f"{down} & {distance}" if down and distance else "—"
         poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
         ball_loc = poss_text if poss_text else ""
         is_home_poss = possession_team == home_team
         direction = "◀" if is_home_poss else "▶"
+        ball_style = "font-size:24px;text-shadow:0 0 10px #fff"
     
     ball_yard = max(0, min(100, ball_yard))
     ball_pct = 10 + (ball_yard / 100) * 80
     
-    return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
+    # Add CSS animation for scoring plays
+    animation_css = """
+    @keyframes pulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.3); }
+    }
+    """ if display_mode == "scoring" else ""
+    
+    return f"""<style>{animation_css}</style>
+    <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
             <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball {direction}</span>
             <span style="color:#aaa">{ball_loc}</span>
@@ -405,11 +568,12 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
             <div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
             <div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);font-size:24px;text-shadow:0 0 10px #fff">🏈</div>
+            <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);{ball_style}">🏈</div>
             <div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
             <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div></div>
         <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
             <span>← {away_code} EZ</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} EZ →</span></div></div>"""
+
 
 def fetch_espn_scores():
     url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
@@ -448,6 +612,9 @@ def fetch_espn_scores():
             is_red_zone = situation.get("isRedZone", False)
             poss_text = situation.get("possessionText", "")
             
+            # NEW: Get lastPlay for scoring detection
+            last_play = situation.get("lastPlay", {})
+            
             if possession_id == home_id:
                 possession_team = home_team
                 is_home_possession = True
@@ -457,54 +624,6 @@ def fetch_espn_scores():
             else:
                 possession_team = None
                 is_home_possession = None
-            
-            # BALL POSITION CALCULATION - Parse poss_text directly for accuracy
-            # Field: LEFT = Away end zone (0-10%), RIGHT = Home end zone (90-100%)
-            # poss_text format: "NE 23" or "HOU 45" = team's side + yard line
-            ball_yard = 50  # default
-            
-            if poss_text and home_team and away_team:
-                # Parse poss_text like "NE 23" or "HOU 45"
-                parts_poss = poss_text.strip().split()
-                if len(parts_poss) >= 2:
-                    try:
-                        side_team = parts_poss[0]  # "NE" or "HOU"
-                        yard_line = int(parts_poss[-1])  # 23, 45, etc.
-                        
-                        # Get team codes
-                        home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
-                        away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
-                        
-                        # Determine absolute field position (0-100)
-                        # 0 = Away's goal line (left), 100 = Home's goal line (right)
-                        if side_team.upper() == away_code.upper():
-                            # Ball is on AWAY's side of field (left half)
-                            # "HOU 20" = 20 yards from HOU's goal line = position 20
-                            ball_yard = yard_line
-                        elif side_team.upper() == home_code.upper():
-                            # Ball is on HOME's side of field (right half)
-                            # "NE 20" = 20 yards from NE's goal line = position 80
-                            ball_yard = 100 - yard_line
-                        else:
-                            # Fallback to yards_to_endzone method
-                            if yards_to_endzone is not None and is_home_possession is not None:
-                                if is_home_possession:
-                                    ball_yard = yards_to_endzone
-                                else:
-                                    ball_yard = 100 - yards_to_endzone
-                    except (ValueError, IndexError):
-                        # Fallback
-                        if yards_to_endzone is not None and is_home_possession is not None:
-                            if is_home_possession:
-                                ball_yard = yards_to_endzone
-                            else:
-                                ball_yard = 100 - yards_to_endzone
-            elif yards_to_endzone is not None and is_home_possession is not None:
-                # Fallback to original method if no poss_text
-                if is_home_possession:
-                    ball_yard = yards_to_endzone
-                else:
-                    ball_yard = 100 - yards_to_endzone
             
             game_date_str = event.get("date", "")
             try:
@@ -520,10 +639,11 @@ def fetch_espn_scores():
                 "total": away_score + home_score,
                 "period": period, "clock": clock, "status_type": status_type,
                 "game_date": game_date, "down": down, "distance": distance,
-                "yards_to_endzone": yards_to_endzone, "ball_yard": ball_yard,
+                "yards_to_endzone": yards_to_endzone,
                 "possession_team": possession_team, "is_red_zone": is_red_zone, "poss_text": poss_text,
-                "is_home_possession": is_home_possession,  # Added for debugging
-                "raw_possession_id": possession_id  # Added for debugging
+                "is_home_possession": is_home_possession,
+                "raw_possession_id": possession_id,
+                "last_play": last_play  # NEW: Store lastPlay for scoring detection
             }
         return games
     except Exception as e:
@@ -822,11 +942,18 @@ with st.sidebar:
 | **-10%−** | Bad |
 """)
     st.divider()
-    st.caption("v2.0.2 NFL EDGE")
+    
+    # Show autorefresh status
+    if HAS_AUTOREFRESH:
+        st.caption("✅ streamlit-autorefresh installed")
+    else:
+        st.caption("⚠️ Install: pip install streamlit-autorefresh")
+    
+    st.caption("v2.1.0 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.0.2")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.1.0")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -836,12 +963,11 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.0")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
     if hdr3.button("🔄 Now", use_container_width=True, key="refresh_live"):
-        st.query_params["r"] = str(int(time.time()))
         st.rerun()
     
     for game_key, g in final_games.items():
@@ -881,12 +1007,21 @@ if live_games or final_games:
                 <span style="color:{state_color};font-size:1.3em;font-weight:bold">{q_display} {clock_str}</span></div>
             <div style="text-align:center;margin-top:12px"><span style="color:{state_color}">{clock_pressure}</span> • <span style="color:#ffaa44">{score_pressure}</span></div></div>""", unsafe_allow_html=True)
         
+        # Use new ball position function with fallback logic
         parts = game_key.split("@")
-        st.markdown(render_football_field(g.get('ball_yard', 50), g.get('down'), g.get('distance'), g.get('possession_team'), parts[0], parts[1], g.get('yards_to_endzone'), g.get('poss_text')), unsafe_allow_html=True)
+        ball_yard, display_mode, poss_team, poss_text_display = get_ball_position_with_fallback(
+            game_key, g, parts[0], parts[1]
+        )
+        
+        st.markdown(render_football_field(
+            ball_yard, g.get('down'), g.get('distance'), 
+            poss_team, parts[0], parts[1], 
+            g.get('yards_to_endzone'), poss_text_display, display_mode
+        ), unsafe_allow_html=True)
         
         # DEBUG: Show raw position data
         with st.expander("🔍 DEBUG: Ball Position Data", expanded=False):
-            poss_team = g.get('possession_team', 'None')
+            poss_team_raw = g.get('possession_team', 'None')
             is_home_poss = g.get('is_home_possession')
             poss_str = "HOME" if is_home_poss == True else "AWAY" if is_home_poss == False else "NONE"
             
@@ -895,21 +1030,32 @@ if live_games or final_games:
             home_code = KALSHI_CODES.get(parts[1], parts[1][:3].upper())
             away_code = KALSHI_CODES.get(parts[0], parts[0][:3].upper())
             
+            # Show lastPlay info
+            last_play = g.get('last_play', {})
+            last_play_text = last_play.get('text', '')[:80] if last_play else 'N/A'
+            is_scoring, score_type, _ = detect_scoring_play(last_play)
+            
+            # Show session state fallback
+            last_known = st.session_state.last_ball_positions.get(game_key, {})
+            
             st.markdown(f"""
             **Raw ESPN Data:**
-            - `poss_text`: **{poss_text}** ← PRIMARY SOURCE
-            - `yards_to_endzone`: **{g.get('yards_to_endzone')}** (fallback)
-            - `possession_team`: **{poss_team}** ({poss_str})
+            - `poss_text`: **{poss_text if poss_text else '(empty)'}**
+            - `yards_to_endzone`: **{g.get('yards_to_endzone')}**
+            - `possession_team`: **{poss_team_raw}** ({poss_str})
             
-            **Parsing Logic:**
-            - Away code: **{away_code}** (LEFT side, 0-50)
-            - Home code: **{home_code}** (RIGHT side, 50-100)
-            - If "{away_code} 20" → ball_yard = 20 (left side)
-            - If "{home_code} 20" → ball_yard = 80 (right side)
+            **Last Play Detection:**
+            - `lastPlay.text`: **{last_play_text}**
+            - `is_scoring`: **{is_scoring}** | `score_type`: **{score_type}**
             
-            **Calculated:**
-            - `ball_yard`: **{g.get('ball_yard')}** (0=left goal, 100=right goal)
-            - `ball_pct`: **{10 + (g.get('ball_yard', 50) / 100) * 80:.1f}%** on field
+            **Session State Fallback:**
+            - Last known ball_yard: **{last_known.get('ball_yard', 'N/A')}**
+            - Last known poss_team: **{last_known.get('poss_team', 'N/A')}**
+            
+            **Calculated Result:**
+            - `display_mode`: **{display_mode}**
+            - `ball_yard`: **{ball_yard}** (0=left goal, 100=right goal)
+            - `ball_pct`: **{10 + (ball_yard / 100) * 80:.1f}%** on field
             """)
         
         with st.expander("📋 Last 5 Plays", expanded=True):
@@ -930,12 +1076,11 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.0.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.0")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
     if hdr3.button("🔄 Refresh", use_container_width=True, key="refresh_pos"):
-        st.query_params["r"] = str(int(time.time()))
         st.rerun()
 
 if st.session_state.positions:
@@ -1258,4 +1403,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.0.2")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.0")
