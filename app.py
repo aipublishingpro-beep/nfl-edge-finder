@@ -769,29 +769,16 @@ if live_games:
                     </div>
                     <div style="text-align:right">
                         <b style="color:{state_color};font-size:1.4em">{state_label}</b>
-                        <div style="color:#888;font-size:0.9em">Leak: {expected_leak}</div>
+                        <div style="color:#888;font-size:0.85em">Price Move: {expected_leak}</div>
                     </div>
                 </div>
-                <div style="background:#000;padding:12px;border-radius:8px;font-family:monospace;margin-bottom:12px">
-                    <span style="color:#fff;font-size:1.1em">{situation_line}</span>
+                <div style="background:#000;padding:12px;border-radius:8px;font-family:monospace;margin-bottom:12px;text-align:center">
+                    <span style="color:#fff;font-size:1.2em">{situation_line}</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
             # Football field visualization
-            poss_team = sit['possession_team'] if sit['possession_team'] else g['away_team']
-            def_team = sit['defense_team'] if sit['defense_team'] else g['home_team']
-            
-            # Make sure we have valid team names
-            if not poss_team or len(poss_team) < 2:
-                poss_team = g['away_team']
-            if not def_team or len(def_team) < 2:
-                def_team = g['home_team']
-            
-            # Get 3-letter codes
-            poss_code = KALSHI_CODES.get(poss_team, poss_team[:3].upper() if poss_team else "OFF")
-            def_code = KALSHI_CODES.get(def_team, def_team[:3].upper() if def_team else "DEF")
-            
             ball_yard = sit['yardline_100']
             
             # Create field with CSS
