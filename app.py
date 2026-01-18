@@ -520,7 +520,7 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
         poss_code = "—"
         ball_loc = ""
         direction = ""
-        ball_style = "font-size:28px;animation:pulse 0.5s infinite;text-shadow:0 0 20px #ffff00"
+        ball_style = "font-size:28px;text-shadow:0 0 20px #ffff00"
     elif display_mode == "kickoff":
         situation = poss_text or "⚡ KICKOFF"
         poss_code = "—"
@@ -544,35 +544,26 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     ball_yard = max(0, min(100, ball_yard))
     ball_pct = 10 + (ball_yard / 100) * 80
     
-    # Add CSS animation for scoring plays
-    animation_css = """
-    @keyframes pulse {
-        0%, 100% { transform: translate(-50%, -50%) scale(1); }
-        50% { transform: translate(-50%, -50%) scale(1.3); }
-    }
-    """ if display_mode == "scoring" else ""
-    
-    return f"""<style>{animation_css}</style>
-    <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-            <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball {direction}</span>
-            <span style="color:#aaa">{ball_loc}</span>
-            <span style="color:#fff;font-weight:bold">{situation}</span></div>
-        <div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
-            <div style="position:absolute;left:10%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:30%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:40%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.6)"></div>
-            <div style="position:absolute;left:60%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
-            <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);{ball_style}">🏈</div>
-            <div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
-            <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div></div>
-        <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
-            <span>← {away_code} EZ</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} EZ →</span></div></div>"""
+    return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
+<div style="display:flex;justify-content:space-between;margin-bottom:8px">
+<span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball {direction}</span>
+<span style="color:#aaa">{ball_loc}</span>
+<span style="color:#fff;font-weight:bold">{situation}</span></div>
+<div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
+<div style="position:absolute;left:10%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:30%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:40%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.6)"></div>
+<div style="position:absolute;left:60%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+<div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);{ball_style}">🏈</div>
+<div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
+<div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div></div>
+<div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
+<span>← {away_code} EZ</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} EZ →</span></div></div>"""
 
 
 def fetch_espn_scores():
@@ -1018,45 +1009,6 @@ if live_games or final_games:
             poss_team, parts[0], parts[1], 
             g.get('yards_to_endzone'), poss_text_display, display_mode
         ), unsafe_allow_html=True)
-        
-        # DEBUG: Show raw position data
-        with st.expander("🔍 DEBUG: Ball Position Data", expanded=False):
-            poss_team_raw = g.get('possession_team', 'None')
-            is_home_poss = g.get('is_home_possession')
-            poss_str = "HOME" if is_home_poss == True else "AWAY" if is_home_poss == False else "NONE"
-            
-            # Show parsing logic
-            poss_text = g.get('poss_text', '')
-            home_code = KALSHI_CODES.get(parts[1], parts[1][:3].upper())
-            away_code = KALSHI_CODES.get(parts[0], parts[0][:3].upper())
-            
-            # Show lastPlay info
-            last_play = g.get('last_play', {})
-            last_play_text = last_play.get('text', '')[:80] if last_play else 'N/A'
-            is_scoring, score_type, _ = detect_scoring_play(last_play)
-            
-            # Show session state fallback
-            last_known = st.session_state.last_ball_positions.get(game_key, {})
-            
-            st.markdown(f"""
-            **Raw ESPN Data:**
-            - `poss_text`: **{poss_text if poss_text else '(empty)'}**
-            - `yards_to_endzone`: **{g.get('yards_to_endzone')}**
-            - `possession_team`: **{poss_team_raw}** ({poss_str})
-            
-            **Last Play Detection:**
-            - `lastPlay.text`: **{last_play_text}**
-            - `is_scoring`: **{is_scoring}** | `score_type`: **{score_type}**
-            
-            **Session State Fallback:**
-            - Last known ball_yard: **{last_known.get('ball_yard', 'N/A')}**
-            - Last known poss_team: **{last_known.get('poss_team', 'N/A')}**
-            
-            **Calculated Result:**
-            - `display_mode`: **{display_mode}**
-            - `ball_yard`: **{ball_yard}** (0=left goal, 100=right goal)
-            - `ball_pct`: **{10 + (ball_yard / 100) * 80:.1f}%** on field
-            """)
         
         with st.expander("📋 Last 5 Plays", expanded=True):
             plays = fetch_play_by_play(g.get('event_id'))
