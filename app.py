@@ -720,9 +720,21 @@ if live_games:
                 "score_diff": score_diff
             }
             
+            # Get team names and codes
+            poss_team = sit['possession_team'] if sit['possession_team'] else g['away_team']
+            def_team = sit['defense_team'] if sit['defense_team'] else g['home_team']
+            
+            if not poss_team or len(poss_team) < 2:
+                poss_team = g['away_team']
+            if not def_team or len(def_team) < 2:
+                def_team = g['home_team']
+            
+            poss_code = KALSHI_CODES.get(poss_team, poss_team[:3].upper() if poss_team else "OFF")
+            def_code = KALSHI_CODES.get(def_team, def_team[:3].upper() if def_team else "DEF")
+            
             # Build display
             down_str = f"{sit['down']}" + ("st" if sit['down']==1 else "nd" if sit['down']==2 else "rd" if sit['down']==3 else "th")
-            situation_line = f"Q{sit['quarter']} {sit['clock_display']} | {down_str} & {sit['yards_to_go']} | {sit['possession_team']} ball"
+            situation_line = f"Q{sit['quarter']} {sit['clock_display']} | {down_str} & {sit['yards_to_go']} | {poss_code} ball"
             
             # Build visual field using Streamlit progress bar style
             field_pct = min(100, max(0, sit['yardline_100'])) / 100
@@ -767,8 +779,19 @@ if live_games:
             """, unsafe_allow_html=True)
             
             # Football field visualization
-            poss_team = sit['possession_team']
-            def_team = sit['defense_team'] or (g['away_team'] if poss_team == g['home_team'] else g['home_team'])
+            poss_team = sit['possession_team'] if sit['possession_team'] else g['away_team']
+            def_team = sit['defense_team'] if sit['defense_team'] else g['home_team']
+            
+            # Make sure we have valid team names
+            if not poss_team or len(poss_team) < 2:
+                poss_team = g['away_team']
+            if not def_team or len(def_team) < 2:
+                def_team = g['home_team']
+            
+            # Get 3-letter codes
+            poss_code = KALSHI_CODES.get(poss_team, poss_team[:3].upper() if poss_team else "OFF")
+            def_code = KALSHI_CODES.get(def_team, def_team[:3].upper() if def_team else "DEF")
+            
             ball_yard = sit['yardline_100']
             
             # Create field with CSS
@@ -778,7 +801,7 @@ if live_games:
                 <div style="display:flex;height:60px;position:relative;background:#2d5a3d">
                     <!-- Possession team end zone (left) -->
                     <div style="width:12%;background:linear-gradient(135deg,#1a3a6e,#0a2a5e);display:flex;align-items:center;justify-content:center;border-right:3px solid #fff">
-                        <span style="color:#fff;font-weight:bold;font-size:11px;writing-mode:vertical-rl;transform:rotate(180deg)">{poss_team[:3].upper()}</span>
+                        <span style="color:#fff;font-weight:bold;font-size:12px">{poss_code}</span>
                     </div>
                     <!-- Playing field -->
                     <div style="flex:1;position:relative;background:repeating-linear-gradient(90deg,#2d5a3d 0px,#2d5a3d 9.4%,#1a472a 9.4%,#1a472a 10%,#2d5a3d 10%,#2d5a3d 19.4%,#1a472a 19.4%,#1a472a 20%)">
@@ -799,7 +822,7 @@ if live_games:
                     </div>
                     <!-- Defense team end zone (right) -->
                     <div style="width:12%;background:linear-gradient(135deg,#8b4513,#654321);display:flex;align-items:center;justify-content:center;border-left:3px solid #fff">
-                        <span style="color:#fff;font-weight:bold;font-size:11px;writing-mode:vertical-rl">{def_team[:3].upper()}</span>
+                        <span style="color:#fff;font-weight:bold;font-size:12px">{def_code}</span>
                     </div>
                 </div>
             </div>
