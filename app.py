@@ -104,38 +104,38 @@ PASS_HEAVY_TEAMS = ["Buffalo", "Cincinnati", "Miami", "Tampa Bay", "LA Chargers"
 RUN_HEAVY_TEAMS = ["Baltimore", "San Francisco", "Cleveland", "Tennessee", "Denver"]
 
 TEAM_STATS = {
-    "Arizona": {"dvoa": -8.5, "def_rank": 28, "home_win_pct": 0.45, "away_win_pct": 0.35},
-    "Atlanta": {"dvoa": 2.5, "def_rank": 20, "home_win_pct": 0.55, "away_win_pct": 0.45},
-    "Baltimore": {"dvoa": 12.5, "def_rank": 2, "home_win_pct": 0.72, "away_win_pct": 0.65},
-    "Buffalo": {"dvoa": 15.8, "def_rank": 4, "home_win_pct": 0.78, "away_win_pct": 0.68},
-    "Carolina": {"dvoa": -12.5, "def_rank": 26, "home_win_pct": 0.38, "away_win_pct": 0.25},
-    "Chicago": {"dvoa": 8.5, "def_rank": 10, "home_win_pct": 0.65, "away_win_pct": 0.45},
-    "Cincinnati": {"dvoa": 5.8, "def_rank": 12, "home_win_pct": 0.58, "away_win_pct": 0.50},
-    "Cleveland": {"dvoa": -2.5, "def_rank": 15, "home_win_pct": 0.52, "away_win_pct": 0.38},
-    "Dallas": {"dvoa": 3.2, "def_rank": 14, "home_win_pct": 0.62, "away_win_pct": 0.42},
-    "Denver": {"dvoa": 12.5, "def_rank": 3, "home_win_pct": 0.75, "away_win_pct": 0.55},
-    "Detroit": {"dvoa": 18.5, "def_rank": 6, "home_win_pct": 0.75, "away_win_pct": 0.62},
-    "Green Bay": {"dvoa": 8.2, "def_rank": 10, "home_win_pct": 0.70, "away_win_pct": 0.55},
-    "Houston": {"dvoa": 6.5, "def_rank": 8, "home_win_pct": 0.58, "away_win_pct": 0.50},
-    "Indianapolis": {"dvoa": -6.8, "def_rank": 22, "home_win_pct": 0.48, "away_win_pct": 0.35},
-    "Jacksonville": {"dvoa": -4.5, "def_rank": 19, "home_win_pct": 0.45, "away_win_pct": 0.32},
-    "Kansas City": {"dvoa": 22.5, "def_rank": 7, "home_win_pct": 0.82, "away_win_pct": 0.72},
-    "Las Vegas": {"dvoa": -8.2, "def_rank": 25, "home_win_pct": 0.45, "away_win_pct": 0.30},
-    "LA Chargers": {"dvoa": 7.8, "def_rank": 9, "home_win_pct": 0.55, "away_win_pct": 0.48},
-    "LA Rams": {"dvoa": 5.5, "def_rank": 14, "home_win_pct": 0.55, "away_win_pct": 0.45},
-    "Miami": {"dvoa": 5.2, "def_rank": 13, "home_win_pct": 0.62, "away_win_pct": 0.40},
-    "Minnesota": {"dvoa": 10.5, "def_rank": 11, "home_win_pct": 0.68, "away_win_pct": 0.55},
-    "New England": {"dvoa": 9.5, "def_rank": 5, "home_win_pct": 0.70, "away_win_pct": 0.52},
-    "New Orleans": {"dvoa": -3.8, "def_rank": 21, "home_win_pct": 0.55, "away_win_pct": 0.38},
-    "NY Giants": {"dvoa": -15.5, "def_rank": 30, "home_win_pct": 0.35, "away_win_pct": 0.22},
-    "NY Jets": {"dvoa": -7.5, "def_rank": 23, "home_win_pct": 0.42, "away_win_pct": 0.30},
-    "Philadelphia": {"dvoa": 14.8, "def_rank": 3, "home_win_pct": 0.75, "away_win_pct": 0.62},
-    "Pittsburgh": {"dvoa": 2.8, "def_rank": 5, "home_win_pct": 0.65, "away_win_pct": 0.48},
-    "San Francisco": {"dvoa": 10.5, "def_rank": 6, "home_win_pct": 0.68, "away_win_pct": 0.58},
-    "Seattle": {"dvoa": 14.5, "def_rank": 2, "home_win_pct": 0.78, "away_win_pct": 0.55},
-    "Tampa Bay": {"dvoa": 4.2, "def_rank": 29, "home_win_pct": 0.55, "away_win_pct": 0.42},
-    "Tennessee": {"dvoa": -9.8, "def_rank": 31, "home_win_pct": 0.42, "away_win_pct": 0.28},
-    "Washington": {"dvoa": 9.5, "def_rank": 8, "home_win_pct": 0.62, "away_win_pct": 0.50}
+    "Arizona": {"dvoa": -12.5, "def_rank": 27, "home_win_pct": 0.42, "away_win_pct": 0.30},
+    "Atlanta": {"dvoa": 2.5, "def_rank": 18, "home_win_pct": 0.55, "away_win_pct": 0.42},
+    "Baltimore": {"dvoa": 15.5, "def_rank": 6, "home_win_pct": 0.72, "away_win_pct": 0.62},
+    "Buffalo": {"dvoa": 18.2, "def_rank": 5, "home_win_pct": 0.78, "away_win_pct": 0.68},
+    "Carolina": {"dvoa": -18.5, "def_rank": 30, "home_win_pct": 0.35, "away_win_pct": 0.22},
+    "Chicago": {"dvoa": -8.5, "def_rank": 22, "home_win_pct": 0.45, "away_win_pct": 0.35},
+    "Cincinnati": {"dvoa": 5.8, "def_rank": 14, "home_win_pct": 0.58, "away_win_pct": 0.48},
+    "Cleveland": {"dvoa": -25.0, "def_rank": 32, "home_win_pct": 0.38, "away_win_pct": 0.25},
+    "Dallas": {"dvoa": -5.2, "def_rank": 20, "home_win_pct": 0.52, "away_win_pct": 0.38},
+    "Denver": {"dvoa": 8.5, "def_rank": 8, "home_win_pct": 0.65, "away_win_pct": 0.50},
+    "Detroit": {"dvoa": 22.5, "def_rank": 4, "home_win_pct": 0.78, "away_win_pct": 0.68},
+    "Green Bay": {"dvoa": 12.2, "def_rank": 10, "home_win_pct": 0.70, "away_win_pct": 0.55},
+    "Houston": {"dvoa": 16.5, "def_rank": 7, "home_win_pct": 0.68, "away_win_pct": 0.58},
+    "Indianapolis": {"dvoa": 14.5, "def_rank": 12, "home_win_pct": 0.55, "away_win_pct": 0.48},
+    "Jacksonville": {"dvoa": 10.5, "def_rank": 11, "home_win_pct": 0.55, "away_win_pct": 0.48},
+    "Kansas City": {"dvoa": 18.5, "def_rank": 9, "home_win_pct": 0.82, "away_win_pct": 0.72},
+    "Las Vegas": {"dvoa": -10.2, "def_rank": 25, "home_win_pct": 0.42, "away_win_pct": 0.28},
+    "LA Chargers": {"dvoa": 11.8, "def_rank": 3, "home_win_pct": 0.62, "away_win_pct": 0.52},
+    "LA Rams": {"dvoa": 24.5, "def_rank": 5, "home_win_pct": 0.72, "away_win_pct": 0.62},
+    "Miami": {"dvoa": -2.5, "def_rank": 16, "home_win_pct": 0.55, "away_win_pct": 0.38},
+    "Minnesota": {"dvoa": 8.5, "def_rank": 13, "home_win_pct": 0.68, "away_win_pct": 0.52},
+    "New England": {"dvoa": 12.5, "def_rank": 8, "home_win_pct": 0.62, "away_win_pct": 0.50},
+    "New Orleans": {"dvoa": -8.8, "def_rank": 23, "home_win_pct": 0.48, "away_win_pct": 0.35},
+    "NY Giants": {"dvoa": -15.5, "def_rank": 29, "home_win_pct": 0.35, "away_win_pct": 0.22},
+    "NY Jets": {"dvoa": -12.5, "def_rank": 26, "home_win_pct": 0.42, "away_win_pct": 0.28},
+    "Philadelphia": {"dvoa": 14.8, "def_rank": 6, "home_win_pct": 0.75, "away_win_pct": 0.60},
+    "Pittsburgh": {"dvoa": 4.8, "def_rank": 10, "home_win_pct": 0.62, "away_win_pct": 0.45},
+    "San Francisco": {"dvoa": 6.5, "def_rank": 15, "home_win_pct": 0.58, "away_win_pct": 0.48},
+    "Seattle": {"dvoa": 28.5, "def_rank": 2, "home_win_pct": 0.78, "away_win_pct": 0.68},
+    "Tampa Bay": {"dvoa": -3.2, "def_rank": 19, "home_win_pct": 0.52, "away_win_pct": 0.40},
+    "Tennessee": {"dvoa": -14.8, "def_rank": 28, "home_win_pct": 0.40, "away_win_pct": 0.25},
+    "Washington": {"dvoa": -4.5, "def_rank": 21, "home_win_pct": 0.52, "away_win_pct": 0.42}
 }
 
 STAR_PLAYERS = {
@@ -751,7 +751,7 @@ with st.sidebar:
 | **-10%−** | Bad |
 """)
     st.divider()
-    st.caption("v1.8.2 NFL EDGE")
+    st.caption("v1.9.0 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -765,7 +765,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.8.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.9.0")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1161,4 +1161,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.8.2")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.9.0")
