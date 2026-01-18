@@ -158,6 +158,62 @@ def build_kalshi_ml_url(away_team, home_team, game_date=None):
     ticker = f"KXNFLGAME-{date_str}{away_code}{home_code}"
     return f"https://kalshi.com/markets/KXNFLGAME/{ticker}"
 
+# ========== FOOTBALL FIELD VISUALIZATION ==========
+def render_football_field(ball_yard, down, distance, possession_team, away_team, home_team):
+    """Render football field with ball position. ball_yard is 0-100 (away endzone to home endzone)"""
+    
+    # Clamp ball position
+    ball_yard = max(0, min(100, ball_yard))
+    ball_pct = ball_yard  # 0 = away endzone, 100 = home endzone
+    
+    away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
+    home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
+    
+    # Down and distance text
+    if down and distance:
+        situation = f"{down} & {distance}"
+    else:
+        situation = "—"
+    
+    # Possession indicator
+    poss_code = KALSHI_CODES.get(possession_team, "???") if possession_team else "???"
+    
+    field_html = f"""
+    <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball</span>
+            <span style="color:#fff;font-weight:bold">{situation}</span>
+        </div>
+        <div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
+            <!-- Yard lines -->
+            <div style="position:absolute;left:10%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:20%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:30%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:40%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.6)"></div>
+            <div style="position:absolute;left:60%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:70%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
+            <!-- Ball -->
+            <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);font-size:24px;text-shadow:0 0 10px #fff">🏈</div>
+            <!-- Endzone labels -->
+            <div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
+            <div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
+            <span>← {away_code} END</span>
+            <span>|20</span>
+            <span>|40</span>
+            <span>50</span>
+            <span>40|</span>
+            <span>20|</span>
+            <span>{home_code} END →</span>
+        </div>
+    </div>
+    """
+    return field_html
+
 # ========== ESPN DATA ==========
 def fetch_espn_scores():
     url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
@@ -172,18 +228,53 @@ def fetch_espn_scores():
             if len(competitors) < 2:
                 continue
             home_team, away_team, home_score, away_score = None, None, 0, 0
+            home_id, away_id = None, None
             for c in competitors:
                 name = c.get("team", {}).get("displayName", "")
                 team_name = TEAM_ABBREVS.get(name, name)
+                team_id = c.get("team", {}).get("id", "")
                 score = int(c.get("score", 0) or 0)
                 if c.get("homeAway") == "home":
-                    home_team, home_score = team_name, score
+                    home_team, home_score, home_id = team_name, score, team_id
                 else:
-                    away_team, away_score = team_name, score
+                    away_team, away_score, away_id = team_name, score, team_id
+            
             status_obj = event.get("status", {})
             status_type = status_obj.get("type", {}).get("name", "STATUS_SCHEDULED")
             clock = status_obj.get("displayClock", "")
             period = status_obj.get("period", 0)
+            
+            # Get situation data (field position, down, distance)
+            situation = comp.get("situation", {})
+            down = situation.get("down")
+            distance = situation.get("distance")
+            yard_line = situation.get("yardLine", 50)
+            possession_id = situation.get("possession", "")
+            is_red_zone = situation.get("isRedZone", False)
+            
+            # Determine possession team
+            if possession_id == home_id:
+                possession_team = home_team
+            elif possession_id == away_id:
+                possession_team = away_team
+            else:
+                possession_team = None
+            
+            # Calculate ball position (0-100 scale, away endzone to home endzone)
+            # yardLine from ESPN is the yard line number (e.g., 25 means the 25 yard line)
+            # We need to convert to 0-100 based on which side
+            if possession_team == home_team:
+                # Home team has ball, yardLine is distance from HOME endzone they're attacking
+                # So if they're on their own 25, that's 75 yards from scoring (ball at 25% of field)
+                # If on opponent's 25, that's 25 yards from scoring (ball at 75%)
+                ball_yard = 100 - yard_line
+            elif possession_team == away_team:
+                # Away team has ball, moving toward away endzone (left side = 0)
+                # If on their own 25, they're 75 yards from scoring (ball at 75%)
+                # If on opponent's 25, they're 25 yards from scoring (ball at 25%)
+                ball_yard = yard_line
+            else:
+                ball_yard = 50  # Default to midfield
             
             game_date_str = event.get("date", "")
             try:
@@ -196,9 +287,13 @@ def fetch_espn_scores():
                 "event_id": event_id,
                 "away_team": away_team, "home_team": home_team,
                 "away_score": away_score, "home_score": home_score,
+                "away_id": away_id, "home_id": home_id,
                 "total": away_score + home_score,
                 "period": period, "clock": clock, "status_type": status_type,
-                "game_date": game_date
+                "game_date": game_date,
+                "down": down, "distance": distance, "yard_line": yard_line,
+                "ball_yard": ball_yard, "possession_team": possession_team,
+                "is_red_zone": is_red_zone
             }
         return games
     except Exception as e:
@@ -340,7 +435,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.5 NFL EDGE")
+    st.caption("v1.6 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -355,7 +450,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.5")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.6")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -381,7 +476,7 @@ if live_games or final_games:
         </div>
         """, unsafe_allow_html=True)
     
-    # LIVE GAMES - Using ONLY scoreboard data (reliable)
+    # LIVE GAMES
     for game_key, g in live_games.items():
         quarter = g['period']
         clock_str = g['clock']
@@ -417,6 +512,10 @@ if live_games or final_games:
             q_display = f"Q{quarter}"
             clock_pressure = f"Q{quarter}"
         
+        # Red zone boost
+        if g.get('is_red_zone'):
+            clock_pressure += " 🔴 RED ZONE"
+        
         st.markdown(f"""
         <div style="background:linear-gradient(135deg,#1a1a2e,#0a0a1e);padding:18px;border-radius:12px;border:2px solid {state_color};margin-bottom:15px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -439,7 +538,18 @@ if live_games or final_games:
         </div>
         """, unsafe_allow_html=True)
         
+        # Football field visualization
         parts = game_key.split("@")
+        field_html = render_football_field(
+            g.get('ball_yard', 50),
+            g.get('down'),
+            g.get('distance'),
+            g.get('possession_team'),
+            parts[0],  # away
+            parts[1]   # home
+        )
+        st.markdown(field_html, unsafe_allow_html=True)
+        
         kalshi_url = build_kalshi_ml_url(parts[0], parts[1], g.get('game_date'))
         st.link_button(f"🔗 Trade {game_key.replace('@', ' @ ')}", kalshi_url, use_container_width=True)
     
@@ -450,7 +560,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.5")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.6")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -652,4 +762,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.5")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.6")
