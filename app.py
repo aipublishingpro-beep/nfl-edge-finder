@@ -166,27 +166,33 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     """
     Render football field with ball position.
     ball_yard: 0-100 scale where 0=away endzone, 100=home endzone
+    Returns None if data is invalid (scoring play, kickoff, etc.)
     """
-    ball_yard = max(0, min(100, ball_yard))
-    ball_pct = 10 + (ball_yard / 100) * 80
-    
     away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
     home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
+    
+    # Check if we have valid situation data
+    # After TDs, kickoffs, etc. - possession clears and data is stale
+    if not possession_team or not poss_text:
+        # Return a "between plays" state instead of wrong data
+        return f"""
+        <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0;text-align:center">
+            <span style="color:#ffaa00;font-size:1.1em">🏈 Between Plays / Scoring</span>
+        </div>
+        """
+    
+    ball_yard = max(0, min(100, ball_yard))
+    ball_pct = 10 + (ball_yard / 100) * 80
     
     if down and distance:
         situation = f"{down} & {distance}"
     else:
         situation = "—"
     
-    poss_code = KALSHI_CODES.get(possession_team, "???") if possession_team else "???"
+    poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
     
     # Show ball location text
-    if poss_text:
-        ball_loc = poss_text
-    elif yards_to_endzone:
-        ball_loc = f"{yards_to_endzone} to go"
-    else:
-        ball_loc = ""
+    ball_loc = poss_text if poss_text else ""
     
     field_html = f"""
     <div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
@@ -457,7 +463,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.7 NFL EDGE")
+    st.caption("v1.7.1 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -472,7 +478,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -532,7 +538,7 @@ if live_games or final_games:
             q_display = f"Q{quarter}"
             clock_pressure = f"Q{quarter}"
         
-        if g.get('is_red_zone'):
+        if g.get('is_red_zone') and g.get('possession_team'):
             clock_pressure += " 🔴 RED ZONE"
         
         st.markdown(f"""
@@ -581,7 +587,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -783,4 +789,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.7")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.1")
