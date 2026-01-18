@@ -1017,10 +1017,16 @@ for game_key, g in games.items():
     try:
         pick, score, reasons, home_out, away_out = calc_ml_score(home, away, injuries, weather_data, last_5, last_games, g.get('game_date'))
         tier, color = get_signal_tier(score)
+        
+        # Get DVOA for both teams
+        home_dvoa = TEAM_STATS.get(home, {}).get('dvoa', 0)
+        away_dvoa = TEAM_STATS.get(away, {}).get('dvoa', 0)
+        
         ml_results.append({
             "pick": pick, "score": score, "color": color, "reasons": reasons,
             "away": away, "home": home, "game_date": g.get('game_date'), "game_key": game_key,
-            "weather": weather_data, "home_out": home_out, "away_out": away_out
+            "weather": weather_data, "home_out": home_out, "away_out": away_out,
+            "home_dvoa": home_dvoa, "away_dvoa": away_dvoa
         })
     except:
         continue
@@ -1068,6 +1074,13 @@ if ml_results:
                 injury_parts.append(f"<span style='color:#ff6666'>{KALSHI_CODES.get(r['home'], 'HME')}: {home_inj_str}</span>")
             injury_html = f"<div style='color:#ff8888;font-size:0.8em;margin-top:4px'>🏥 {' | '.join(injury_parts)}</div>"
         
+        # DVOA display for both teams
+        home_dvoa = r.get("home_dvoa", 0)
+        away_dvoa = r.get("away_dvoa", 0)
+        home_dvoa_color = "#00ff00" if home_dvoa >= 10 else "#ffff00" if home_dvoa >= 0 else "#ff6666"
+        away_dvoa_color = "#00ff00" if away_dvoa >= 10 else "#ffff00" if away_dvoa >= 0 else "#ff6666"
+        dvoa_html = f"<div style='font-size:0.8em;margin-top:4px'>📊 DVOA: <span style='color:{away_dvoa_color}'>{KALSHI_CODES.get(r['away'], 'AWY')} {away_dvoa:+.1f}%</span> vs <span style='color:{home_dvoa_color}'>{KALSHI_CODES.get(r['home'], 'HME')} {home_dvoa:+.1f}%</span></div>"
+        
         st.markdown(f"""<div style="background:linear-gradient(135deg,#0f172a,#020617);padding:10px 12px;margin-bottom:4px;border-radius:6px;border-left:3px solid {r['color']}">
         <div style="display:flex;justify-content:space-between;align-items:center">
             <div><b style="color:#fff">{pick_team}</b> <span style="color:#666">vs {opponent}</span></div>
@@ -1075,6 +1088,7 @@ if ml_results:
             <span style="color:#38bdf8;font-weight:bold">{r['score']}/10</span></div>
         </div>
         <div style="color:#777;font-size:0.85em;margin-top:4px">{reasons_str}</div>
+        {dvoa_html}
         {injury_html}</div>""", unsafe_allow_html=True)
         
         st.link_button(f"BUY {pick_code}", this_url, use_container_width=True)
