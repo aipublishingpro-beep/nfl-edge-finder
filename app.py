@@ -336,52 +336,92 @@ def fetch_play_by_play(event_id):
         data = resp.json()
         plays = []
         
-        # Get drives and plays
-        all_plays = data.get("plays", [])
+        # Try multiple paths where ESPN stores plays
+        all_plays = []
+        
+        # Path 1: Direct plays array
+        if "plays" in data:
+            all_plays = data.get("plays", [])
+        
+        # Path 2: Drives > previous > plays
+        if not all_plays and "drives" in data:
+            drives = data.get("drives", {})
+            previous_drives = drives.get("previous", [])
+            for drive in previous_drives:
+                drive_plays = drive.get("plays", [])
+                all_plays.extend(drive_plays)
+            # Also check current drive
+            current = drives.get("current", {})
+            if current:
+                all_plays.extend(current.get("plays", []))
+        
+        # Path 3: scoringPlays
+        if not all_plays and "scoringPlays" in data:
+            all_plays = data.get("scoringPlays", [])
+        
+        if not all_plays:
+            return []
         
         # Get last 5 plays, most recent first
         recent_plays = all_plays[-5:] if len(all_plays) >= 5 else all_plays
         recent_plays = list(reversed(recent_plays))
         
         for play in recent_plays:
-            play_text = play.get("text", "")
-            play_type = play.get("type", {}).get("text", "")
+            play_text = play.get("text", "") or play.get("description", "") or ""
+            play_type = play.get("type", {}).get("text", "") if isinstance(play.get("type"), dict) else str(play.get("type", ""))
             is_scoring = play.get("scoringPlay", False)
-            period = play.get("period", {}).get("number", 0) if isinstance(play.get("period"), dict) else play.get("period", 0)
-            clock = play.get("clock", {}).get("displayValue", "") if isinstance(play.get("clock"), dict) else ""
+            
+            # Handle period - can be dict or int
+            period_data = play.get("period", {})
+            if isinstance(period_data, dict):
+                period = period_data.get("number", 0)
+            else:
+                period = period_data or 0
+            
+            # Handle clock - can be dict or string
+            clock_data = play.get("clock", {})
+            if isinstance(clock_data, dict):
+                clock = clock_data.get("displayValue", "")
+            else:
+                clock = str(clock_data) if clock_data else ""
             
             # Detect play type for icons
-            short_text = play.get("shortText", "")
-            if is_scoring:
+            short_text = play.get("shortText", "") or ""
+            text_lower = play_text.lower()
+            
+            if is_scoring or "touchdown" in text_lower:
                 icon = "🏈"
-            elif "intercept" in play_text.lower():
+            elif "intercept" in text_lower:
                 icon = "🔴"
-            elif "fumble" in play_text.lower():
+            elif "fumble" in text_lower:
                 icon = "🔴"
-            elif "touchdown" in play_text.lower() or "TD" in short_text:
-                icon = "🏈"
-            elif "field goal" in play_text.lower():
+            elif "field goal" in text_lower:
                 icon = "🥅"
-            elif "punt" in play_text.lower():
+            elif "punt" in text_lower:
                 icon = "📤"
-            elif "kickoff" in play_text.lower():
+            elif "kickoff" in text_lower or "kick off" in text_lower:
                 icon = "📤"
-            elif "sack" in play_text.lower():
+            elif "sack" in text_lower:
                 icon = "💥"
-            elif "incomplete" in play_text.lower():
+            elif "incomplete" in text_lower:
                 icon = "❌"
+            elif "pass" in text_lower:
+                icon = "🎯"
+            elif "rush" in text_lower or "run" in text_lower:
+                icon = "🏃"
             else:
                 icon = "▶️"
             
-            plays.append({
-                "text": play_text[:100] + "..." if len(play_text) > 100 else play_text,
-                "short": short_text,
-                "type": play_type,
-                "scoring": is_scoring,
-                "period": period,
-                "clock": clock,
-                "icon": icon
-            })
+            if play_text:
+                plays.append({
+                    "text": play_text[:100] + "..." if len(play_text) > 100 else play_text,
+                    "short": short_text,
+                    "type": play_type,
+                    "scoring": is_scoring,
+                    "period": period,
+                    "clock": clock,
+                    "icon": icon
+                })
         
         return plays
     except Exception as e:
@@ -522,7 +562,7 @@ with st.sidebar:
     st.header("📖 ML LEGEND")
     st.markdown("🟢 **STRONG** → 8.0+\n\n🔵 **BUY** → 6.5-7.9\n\n🟡 **LEAN** → 5.5-6.4")
     st.divider()
-    st.caption("v1.7.2 NFL EDGE")
+    st.caption("v1.7.3 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
@@ -537,7 +577,7 @@ if live_games or final_games:
     st.caption("Pre-resolution stress detection • Not predictions • Not play-by-play")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.3")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -660,7 +700,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v1.7.3")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -862,4 +902,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.2")
+st.caption("⚠️ Educational analysis only. Not financial advice. v1.7.3")
