@@ -409,6 +409,9 @@ def get_ball_position_with_fallback(game_key, g, away_team, home_team):
     """
     Calculate ball position with smart fallbacks for empty poss_text situations.
     
+    FIX FROM EARLIER TODAY: Use ESPN's actual abbreviations (away_abbrev, home_abbrev)
+    instead of KALSHI_CODES for matching poss_text team codes.
+    
     Returns: (ball_yard, display_mode, poss_team, poss_text)
     display_mode: "normal", "scoring", "between_plays", "kickoff"
     """
@@ -420,8 +423,9 @@ def get_ball_position_with_fallback(game_key, g, away_team, home_team):
     period = g.get('period', 0)
     clock = g.get('clock', '')
     
-    home_code = KALSHI_CODES.get(home_team, home_team[:3].upper())
-    away_code = KALSHI_CODES.get(away_team, away_team[:3].upper())
+    # KEY FIX: Use ESPN's actual abbreviations for comparison
+    home_abbrev = g.get('home_abbrev', KALSHI_CODES.get(home_team, home_team[:3].upper()))
+    away_abbrev = g.get('away_abbrev', KALSHI_CODES.get(away_team, away_team[:3].upper()))
     
     # Get last known position from session state
     last_known = st.session_state.last_ball_positions.get(game_key, {})
@@ -434,11 +438,14 @@ def get_ball_position_with_fallback(game_key, g, away_team, home_team):
                 side_team = parts_poss[0].upper()
                 yard_line = int(parts_poss[-1])
                 
-                # Calculate ball_yard based on which side of field
-                if side_team == away_code.upper():
-                    ball_yard = yard_line  # Away's side (left half, 0-50)
-                elif side_team == home_code.upper():
-                    ball_yard = 100 - yard_line  # Home's side (right half, 50-100)
+                # FIX: Compare against ESPN abbreviations, not KALSHI_CODES
+                # Field layout: LEFT (0) = Away endzone, RIGHT (100) = Home endzone
+                if side_team == away_abbrev.upper():
+                    # Ball is on away team's side of field (e.g., "BUF 25" = 25 yards from away endzone)
+                    ball_yard = yard_line
+                elif side_team == home_abbrev.upper():
+                    # Ball is on home team's side of field (e.g., "KC 25" = 25 yards from home endzone = 75 from left)
+                    ball_yard = 100 - yard_line
                 else:
                     # Unknown team code, use yards_to_endzone fallback
                     if is_home_possession is not None and yards_to_endzone is not None:
@@ -542,6 +549,7 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
         ball_style = "font-size:24px;text-shadow:0 0 10px #fff"
     
     ball_yard = max(0, min(100, ball_yard))
+    # Scale ball_yard (0-100) to visual field (10%-90%) since endzones are 0-10% and 90-100%
     ball_pct = 10 + (ball_yard / 100) * 80
     
     return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
@@ -580,15 +588,19 @@ def fetch_espn_scores():
                 continue
             home_team, away_team, home_score, away_score = None, None, 0, 0
             home_id, away_id = None, None
+            home_abbrev, away_abbrev = None, None  # ESPN's actual abbreviations - KEY FIX
             for c in competitors:
                 name = c.get("team", {}).get("displayName", "")
                 team_name = TEAM_ABBREVS.get(name, name)
                 team_id = c.get("team", {}).get("id", "")
+                espn_abbrev = c.get("team", {}).get("abbreviation", "")  # Get ESPN's abbreviation
                 score = int(c.get("score", 0) or 0)
                 if c.get("homeAway") == "home":
                     home_team, home_score, home_id = team_name, score, team_id
+                    home_abbrev = espn_abbrev
                 else:
                     away_team, away_score, away_id = team_name, score, team_id
+                    away_abbrev = espn_abbrev
             
             status_obj = event.get("status", {})
             status_type = status_obj.get("type", {}).get("name", "STATUS_SCHEDULED")
@@ -627,6 +639,7 @@ def fetch_espn_scores():
                 "event_id": event_id, "away_team": away_team, "home_team": home_team,
                 "away_score": away_score, "home_score": home_score,
                 "away_id": away_id, "home_id": home_id,
+                "away_abbrev": away_abbrev, "home_abbrev": home_abbrev,  # KEY FIX: Store ESPN abbreviations
                 "total": away_score + home_score,
                 "period": period, "clock": clock, "status_type": status_type,
                 "game_date": game_date, "down": down, "distance": distance,
@@ -940,11 +953,11 @@ with st.sidebar:
     else:
         st.caption("⚠️ Install: pip install streamlit-autorefresh")
     
-    st.caption("v2.1.0 NFL EDGE")
+    st.caption("v2.1.1 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.1.0")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.1.1")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -954,7 +967,7 @@ if live_games or final_games:
     st.subheader("⚡ LiveState — Live Uncertainty Tracker")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1028,7 +1041,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 
 if not live_games and not final_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.0")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.1")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1355,4 +1368,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.0")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.1")
