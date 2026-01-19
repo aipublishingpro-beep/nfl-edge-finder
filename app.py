@@ -953,37 +953,30 @@ with st.sidebar:
     else:
         st.caption("⚠️ Install: pip install streamlit-autorefresh")
     
-    st.caption("v2.1.1 NFL EDGE")
+    st.caption("v2.1.2 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.1.1")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.1.2")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
-final_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_FINAL"}
 
-if live_games or final_games:
-    st.subheader("⚡ LiveState — Live Uncertainty Tracker")
+# Only show TODAY's final games, not old ones
+today_date = now.date()
+final_games = {k: v for k, v in games.items() if v['status_type'] == "STATUS_FINAL" and v.get('game_date') and v['game_date'].date() == today_date}
+
+# LIVE GAMES FIRST - This is what user wants to see immediately
+if live_games:
+    st.subheader("🔴 LIVE NOW")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
     if hdr3.button("🔄 Now", use_container_width=True, key="refresh_live"):
         st.rerun()
-    
-    for game_key, g in final_games.items():
-        parts = game_key.split("@")
-        winner = parts[1] if g['home_score'] > g['away_score'] else parts[0]
-        winner_code = KALSHI_CODES.get(winner, winner[:3].upper())
-        
-        st.markdown(f"""<div style="background:linear-gradient(135deg,#1a2e1a,#0a1e0a);padding:18px;border-radius:12px;border:2px solid #44ff44;margin-bottom:15px">
-            <div style="text-align:center"><b style="color:#fff;font-size:1.4em">{g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']}</b>
-                <span style="color:#44ff44;margin-left:20px;font-size:1.2em">✅ RESOLVED</span></div>
-            <div style="background:#000;padding:12px;border-radius:8px;margin-top:12px;text-align:center">
-                <span style="color:#44ff44;font-size:1.2em">FINAL | {winner_code} WIN</span></div></div>""", unsafe_allow_html=True)
     
     for game_key, g in live_games.items():
         quarter = g['period']
@@ -1036,12 +1029,27 @@ if live_games or final_games:
     
     st.divider()
 
+# TODAY'S FINAL GAMES - Collapsed by default, below live games
+if final_games:
+    with st.expander(f"✅ Today's Final Games ({len(final_games)})", expanded=False):
+        for game_key, g in final_games.items():
+            parts = game_key.split("@")
+            winner = parts[1] if g['home_score'] > g['away_score'] else parts[0]
+            winner_code = KALSHI_CODES.get(winner, winner[:3].upper())
+            
+            st.markdown(f"""<div style="background:linear-gradient(135deg,#1a2e1a,#0a1e0a);padding:12px;border-radius:8px;border:1px solid #44ff44;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="color:#fff">{g['away_team']} {g['away_score']} @ {g['home_team']} {g['home_score']}</span>
+                    <span style="color:#44ff44">✅ {winner_code} WIN</span></div></div>""", unsafe_allow_html=True)
+    st.divider()
+
 # ========== ACTIVE POSITIONS ==========
 st.subheader("📈 ACTIVE POSITIONS")
 
-if not live_games and not final_games:
+# Show refresh controls here if no live games
+if not live_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.1")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.2")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1368,4 +1376,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.1")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.2")
