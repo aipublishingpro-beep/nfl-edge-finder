@@ -19,6 +19,40 @@ st.set_page_config(page_title="NFL Edge Finder", page_icon="🏈", layout="wide"
 if "sid" not in st.session_state:
     st.session_state["sid"] = str(uuid.uuid4())
 
+# ========== GA4 MEASUREMENT PROTOCOL (works on Streamlit Cloud!) ==========
+GA4_MEASUREMENT_ID = "G-NQKY5VQ376"
+GA4_API_SECRET = "n4oBJjH7RXi3dA7aQo2CZA"
+
+def track_ga4_event(event_name, params=None):
+    """Send event to GA4 via Measurement Protocol - bypasses Streamlit's JS limitations"""
+    try:
+        url = f"https://www.google-analytics.com/mp/collect?measurement_id={GA4_MEASUREMENT_ID}&api_secret={GA4_API_SECRET}"
+        
+        payload = {
+            "client_id": st.session_state.get("sid", str(uuid.uuid4())),
+            "events": [{
+                "name": event_name,
+                "params": params or {}
+            }]
+        }
+        
+        requests.post(url, json=payload, timeout=2)
+    except:
+        pass  # Silent fail - don't break app if GA fails
+
+def track_page_view(page_name="NFL Edge Finder"):
+    """Track page view"""
+    track_ga4_event("page_view", {
+        "page_title": page_name,
+        "page_location": "https://bigsnapshot.streamlit.app",
+        "engagement_time_msec": "1000"
+    })
+
+# Track page view on load
+if "page_tracked" not in st.session_state:
+    track_page_view()
+    st.session_state.page_tracked = True
+
 # Session state for ball position tracking
 if "last_ball_positions" not in st.session_state:
     st.session_state.last_ball_positions = {}  # {game_key: {"ball_yard": 50, "poss_team": "...", "poss_text": "..."}}
@@ -27,14 +61,6 @@ eastern = pytz.timezone("US/Eastern")
 today_str = datetime.now(eastern).strftime("%Y-%m-%d")
 
 st.markdown("""
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-NQKY5VQ376"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-NQKY5VQ376');
-</script>
 <style>
 .stLinkButton > a {background-color: #00aa00 !important;border-color: #00aa00 !important;color: white !important;}
 .stLinkButton > a:hover {background-color: #00cc00 !important;border-color: #00cc00 !important;}
@@ -953,11 +979,11 @@ with st.sidebar:
     else:
         st.caption("⚠️ Install: pip install streamlit-autorefresh")
     
-    st.caption("v2.1.2 NFL EDGE")
+    st.caption("v2.1.3 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.1.2")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.1.3")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -971,9 +997,10 @@ if live_games:
     st.subheader("🔴 LIVE NOW")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.3")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
+        track_ga4_event("toggle_autorefresh", {"enabled": st.session_state.auto_refresh})
         st.rerun()
     if hdr3.button("🔄 Now", use_container_width=True, key="refresh_live"):
         st.rerun()
@@ -1049,7 +1076,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 # Show refresh controls here if no live games
 if not live_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.2")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.3")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1358,6 +1385,8 @@ if st.button("✅ ADD", use_container_width=True, type="primary"):
             "added_at": now.strftime("%a %I:%M %p")
         })
         save_positions(st.session_state.positions)
+        # Track position added event
+        track_ga4_event("add_position", {"game": game_key, "pick": st.session_state.selected_ml_pick})
         st.rerun()
 
 st.divider()
@@ -1376,4 +1405,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.2")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.3")
