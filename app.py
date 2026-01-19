@@ -550,37 +550,49 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
     # Build situation text based on display mode
     if display_mode == "scoring":
         situation = poss_text or "🏈 SCORE!"
-        poss_code = "—"
+        poss_display = ""
         ball_loc = ""
         direction = ""
         ball_style = "font-size:28px;text-shadow:0 0 20px #ffff00"
     elif display_mode == "kickoff":
         situation = poss_text or "⚡ KICKOFF"
-        poss_code = "—"
+        poss_display = ""
         ball_loc = ""
         direction = ""
         ball_style = "font-size:24px;text-shadow:0 0 10px #fff"
     elif display_mode == "between_plays" or not possession_team:
         situation = poss_text if poss_text else "Between Plays"
-        poss_code = "—"
+        poss_display = ""
         ball_loc = ""
         direction = ""
         ball_style = "font-size:24px;opacity:0.6;text-shadow:0 0 10px #fff"
     else:
-        situation = f"{down} & {distance}" if down and distance else "—"
-        poss_code = KALSHI_CODES.get(possession_team, possession_team[:3].upper() if possession_team else "???")
+        situation = f"{down} & {distance}" if down and distance else ""
         ball_loc = poss_text if poss_text else ""
         is_home_poss = possession_team == home_team
-        direction = "◀" if is_home_poss else "▶"
+        
+        # Clear possession display with full team name and direction arrow
+        if is_home_poss:
+            poss_display = f"🏈 {home_team.upper()} has the ball ◄◄◄ attacking"
+            direction = "◄"
+        else:
+            poss_display = f"🏈 {away_team.upper()} has the ball ►►► attacking"
+            direction = "►"
         ball_style = "font-size:24px;text-shadow:0 0 10px #fff"
     
     ball_yard = max(0, min(100, ball_yard))
     # Scale ball_yard (0-100) to visual field (10%-90%) since endzones are 0-10% and 90-100%
     ball_pct = 10 + (ball_yard / 100) * 80
     
+    # Red zone indicator
+    red_zone_note = ""
+    if yards_to_endzone and yards_to_endzone <= 20 and possession_team:
+        red_zone_note = " 🔴 RED ZONE!"
+    
     return f"""<div style="background:#1a1a1a;padding:15px;border-radius:10px;margin:10px 0">
+<div style="text-align:center;margin-bottom:10px;font-size:1.1em">
+<span style="color:#00ff00;font-weight:bold">{poss_display}</span><span style="color:#ff4444">{red_zone_note}</span></div>
 <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-<span style="color:#ffaa00;font-weight:bold">🏈 {poss_code} Ball {direction}</span>
 <span style="color:#aaa">{ball_loc}</span>
 <span style="color:#fff;font-weight:bold">{situation}</span></div>
 <div style="position:relative;height:60px;background:linear-gradient(90deg,#8B0000 0%,#8B0000 10%,#228B22 10%,#228B22 90%,#00008B 90%,#00008B 100%);border-radius:8px;overflow:hidden">
@@ -594,8 +606,8 @@ def render_football_field(ball_yard, down, distance, possession_team, away_team,
 <div style="position:absolute;left:80%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
 <div style="position:absolute;left:90%;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.3)"></div>
 <div style="position:absolute;left:{ball_pct}%;top:50%;transform:translate(-50%,-50%);{ball_style}">🏈</div>
-<div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{away_code}</div>
-<div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:12px">{home_code}</div></div>
+<div style="position:absolute;left:5%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:14px">{away_code}</div>
+<div style="position:absolute;left:95%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:bold;font-size:14px">{home_code}</div></div>
 <div style="display:flex;justify-content:space-between;margin-top:5px;color:#888;font-size:11px">
 <span>← {away_code} EZ</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>{home_code} EZ →</span></div></div>"""
 
@@ -979,11 +991,11 @@ with st.sidebar:
     else:
         st.caption("⚠️ Install: pip install streamlit-autorefresh")
     
-    st.caption("v2.1.3 NFL EDGE")
+    st.caption("v2.1.4 NFL EDGE")
 
 # ========== TITLE ==========
 st.title("🏈 NFL EDGE FINDER")
-st.caption("10-Factor ML Model + LiveState Tracker | v2.1.3")
+st.caption("10-Factor ML Model + LiveState Tracker | v2.1.4")
 
 # ========== LIVESTATE ==========
 live_games = {k: v for k, v in games.items() if v['period'] > 0 and v['status_type'] != "STATUS_FINAL"}
@@ -997,7 +1009,7 @@ if live_games:
     st.subheader("🔴 LIVE NOW")
     
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.3")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.4")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_live"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         track_ga4_event("toggle_autorefresh", {"enabled": st.session_state.auto_refresh})
@@ -1076,7 +1088,7 @@ st.subheader("📈 ACTIVE POSITIONS")
 # Show refresh controls here if no live games
 if not live_games:
     hdr1, hdr2, hdr3 = st.columns([3, 1, 1])
-    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.3")
+    hdr1.caption(f"{auto_status} | {now.strftime('%I:%M:%S %p ET')} | v2.1.4")
     if hdr2.button("🔄 Auto" if not st.session_state.auto_refresh else "⏹️ Stop", use_container_width=True, key="auto_pos"):
         st.session_state.auto_refresh = not st.session_state.auto_refresh
         st.rerun()
@@ -1405,4 +1417,4 @@ else:
     st.info("No games this week")
 
 st.divider()
-st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.3")
+st.caption("⚠️ Educational analysis only. Not financial advice. v2.1.4")
